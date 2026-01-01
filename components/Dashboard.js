@@ -66,10 +66,12 @@ export default function HomePage() {
       link: '/courses/motorcycle',
     },
     { name: 'רכב פרטי', image: '/images/privateCar.jpg', link: '/courses/car' },
-    { name: 'משאית', image: '/images/truck.jpg', link: '/courses/truck' },
+    { name: ' C1 משאית', image: '/images/truck.jpg', link: '/courses/truck' },
     { name: 'אוטובוס', image: '/images/bus.jpg', link: '/courses/bus' },
     { name: 'אופנוע ים', image: '/images/jetski.jpg', link: '/courses/jetski' },
     { name: 'טרקטור', image: '/images/tractor.jpg', link: '/courses/tractor' },
+    { name: 'מונית', image: '/images/taxi.jpg', link: '/courses/taxi' },
+     { name: 'משאית C', image: '/images/cTruckPhoto.jpg', link: '/courses/cTruck' },
   ];
 
   const advantages = [
