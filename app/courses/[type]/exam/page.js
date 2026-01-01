@@ -3,10 +3,11 @@ import QuestionsClient from '../questions/QuestionsClient';
 export default async function QuestionsPage({ params }) {
   const { type } = await params;
   const collection = await getCollection(`${type}questions`);
+  const length = await collection.countDocuments();
   function randomNumbers() {
     const set = new Set();
     while (set.size < 30) {
-      set.add(Math.floor(Math.random() * 1275) + 1);
+      set.add(Math.floor(Math.random() * length) + 1);
     }
     return [...set];
   }
