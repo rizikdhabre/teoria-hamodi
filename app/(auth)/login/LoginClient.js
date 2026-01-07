@@ -16,7 +16,7 @@ function Input({ label, type, name }) {
         name={name}
         className="w-full bg-transparent border-b-2 border-white focus:border-[#e46033] outline-none px-1 pt-3 pb-1 peer"
       />
-      <label className="absolute left-0 top-1/2 -translate-y-1/2 text-white peer-focus:top-[-5px] peer-valid:top-[-5px] peer-focus:text-[#e46033] peer-valid:text-[#e46033] transition-all">
+      <label className="absolute left-0 top-1/2 -translate-y-1/2 text-white peer-focus:-top-1.25 peer-valid:-top-1.25 peer-focus:text-[#e46033] peer-valid:text-[#e46033] transition-all">
         {label}
       </label>
     </div>
@@ -50,8 +50,6 @@ export default function LoginClient() {
     const formData = new FormData(e.target);
     const pin = formData.get('pin');
     const username = formData.get('username');
-
-    console.log('Fetching password for:', username, pin);
 
     if (!pin || !username) {
       setFetchError('אנא מלא את כל השדות');

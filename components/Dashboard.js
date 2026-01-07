@@ -119,6 +119,12 @@ export default function HomePage() {
           image: '/images/jetski.jpg',
           link: '/courses/jetski',
         },
+        {
+          id: 'boat',
+          name: ' סירת מנוע ',
+          image: '/images/boat.jpg',
+          link: '/courses/boat',
+        },
       ],
     },
   ];
@@ -314,11 +320,6 @@ export default function HomePage() {
         <h2 className="text-4xl font-bold mb-6">
           אל תחכה! אלפי תלמידים כבר עברו בהצלחה 🚦
         </h2>
-        <Link href="/login">
-          <button className="px-8 py-3 bg-blue-600 hover:bg-blue-700 rounded-md text-lg font-semibold">
-            התחל ללמוד עכשיו
-          </button>
-        </Link>
       </section>
     </main>
   );

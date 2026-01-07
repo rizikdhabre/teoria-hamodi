@@ -3,6 +3,8 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ClientProviders from './Providers/ClientProviders';
 import { cookies } from 'next/headers';
+import WhatsAppButton from '@/components/WhatsAppButton';
+
 
 export default async function RootLayout({ children }) {
   const cookieStore = await cookies();
@@ -45,6 +47,7 @@ export default async function RootLayout({ children }) {
         <ClientProviders lang={lang}>
           <Header />
           {children}
+               <WhatsAppButton />
           <Footer />
         </ClientProviders>
       </body>

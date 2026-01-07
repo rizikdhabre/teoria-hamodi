@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { FiSearch } from 'react-icons/fi';
+import WhatsAppButton from '../WhatsAppButton';
 
 export default function Header() {
   const { data: session, status } = useSession();
@@ -217,6 +218,7 @@ export default function Header() {
               הרשמה/כניסה
             </Link>
           </nav>
+
 
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
