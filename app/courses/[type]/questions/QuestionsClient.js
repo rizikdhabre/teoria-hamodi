@@ -5,13 +5,7 @@ import { fetchQuestionsByRange } from '../actions';
 
 /* ---------------- Question Card ---------------- */
 
-function QuestionCard({
-  question,
-  type,
-  answerState,
-  onSelect,
-  onReveal,
-}) {
+function QuestionCard({ question, type, answerState, onSelect, onReveal }) {
   const { selected, showResult, revealCorrect } = answerState;
 
   return (
@@ -43,8 +37,7 @@ function QuestionCard({
             (showResult && isSelected && isCorrect) ||
             (revealCorrect && isCorrect);
 
-          const showWrong =
-            showResult && isSelected && !isCorrect;
+          const showWrong = showResult && isSelected && !isCorrect;
 
           return (
             <div key={key}>
@@ -101,6 +94,7 @@ export default function QuestionsClient({
   totalCount,
   rangeSize = 10,
 }) {
+  const [mapOpen, setMapOpen] = useState(false);
   const [questions, setQuestions] = useState(initialQuestions);
   const [answers, setAnswers] = useState(
     initialQuestions.map(() => ({
@@ -172,6 +166,53 @@ export default function QuestionsClient({
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-6 mt-10">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* MAP */}
+        <div className="lg:block mt-4">
+          {/* MOBILE TOGGLE BUTTON */}
+          <div className="lg:hidden mb-2">
+            <button
+              onClick={() => setMapOpen((v) => !v)}
+              className="w-full bg-gray-800 py-2 rounded-xl flex items-center justify-center gap-2"
+            >
+              <span className="text-xl">☰</span>
+              <span>מפת שאלות</span>
+            </button>
+          </div>
+
+          {/* MAP PANEL */}
+          <div
+            className={`
+      bg-gray-800 p-4 rounded-xl h-fit
+      ${mapOpen ? 'block' : 'hidden'}
+      lg:block lg:sticky lg:top-6
+    `}
+          >
+            <h3 className="font-bold mb-4 text-center">מפת שאלות</h3>
+
+            <div className="grid grid-cols-3 gap-2 text-sm">
+              {ranges.map((r) => {
+                const active =
+                  r.from === activeRange.from && r.to === activeRange.to;
+
+                return (
+                  <button
+                    key={`${r.from}-${r.to}`}
+                    onClick={() => {
+                      selectRange(r);
+                      setMapOpen(false); // 👈 auto close on mobile
+                    }}
+                    className={`py-1 rounded ${
+                      active ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'
+                    }`}
+                  >
+                    {`${String(r.from).padStart(3, '0')}–${String(r.to).padStart(3, '0')}`}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
         {/* QUESTIONS */}
         <div className="lg:col-span-3">
           {questions.map((q, i) => (
@@ -185,38 +226,7 @@ export default function QuestionsClient({
             />
           ))}
 
-          {isPending && (
-            <p className="text-center opacity-50">Loading…</p>
-          )}
-        </div>
-
-        {/* MAP */}
-        <div className="bg-gray-800 p-4 rounded-xl h-fit sticky top-6">
-          <h3 className="font-bold mb-4 text-center">
-            מפת שאלות
-          </h3>
-
-          <div className="grid grid-cols-3 gap-2 text-sm">
-            {ranges.map((r) => {
-              const active =
-                r.from === activeRange.from &&
-                r.to === activeRange.to;
-
-              return (
-                <button
-                  key={`${r.from}-${r.to}`}
-                  onClick={() => selectRange(r)}
-                  className={`py-1 rounded ${
-                    active
-                      ? 'bg-blue-600'
-                      : 'bg-gray-700 hover:bg-gray-600'
-                  }`}
-                >
-                  {`${String(r.from).padStart(3, '0')}–${String(r.to).padStart(3, '0')}`}
-                </button>
-              );
-            })}
-          </div>
+          {isPending && <p className="text-center opacity-50">Loading…</p>}
         </div>
       </div>
     </div>

@@ -50,38 +50,32 @@ const EXAM_CONFIG = {
   cTruck: {
     questionNumber: 30,
     allowedWrong: 4,
-    time: 40 * 60,
     title: 'מבחן משאית קלה',
   },
   truck: {
     questionNumber: 30,
     allowedWrong: 4,
-    time: 40 * 60,
     title: 'מבחן משאית',
   },
   bus: {
     questionNumber: 30,
     allowedWrong: 4,
-    time: 40 * 60,
     title: 'מבחן אוטובוס',
   },
   tractor: {
     questionNumber: 30,
     allowedWrong: 4,
-    time: 40 * 60,
     title: 'מבחן טרקטור',
   },
   jetski: {
     allowedWrong: 4, // רגילות
     mandatoryAllowedWrong: 0, // חובה – אפס טעויות
-    time: 60 * 60,
     title: 'מבחן אופנוע ים',
   },
 
   boat: {
     allowedWrong: 9, // רגילות
     mandatoryAllowedWrong: 0, // חובה – אפס טעויות
-    time: 60 * 60,
     title: 'מבחן כלי שיט',
   },
 };
@@ -292,7 +286,6 @@ export default function ExamClient({ type, questions }) {
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-6">
       {/* HEADER */}
-      {/* HEADER */}
       <div className="mb-6">
         {/* Top row */}
         <div className="flex justify-between items-center">
@@ -310,17 +303,17 @@ export default function ExamClient({ type, questions }) {
         </div>
 
         {/* Rules row */}
-        {(type === 'boat' || type === 'jetski') && (
+      
           <div className="mt-2 flex gap-4 text-sm font-bold">
             <span className="text-yellow-300">
               טעויות רגילות מותרות: {config.allowedWrong}
             </span>
-
+         {(type === 'boat' || type === 'jetski') && (
             <span className="text-red-400">
               טעויות בשאלות חובה: {config.mandatoryAllowedWrong}
             </span>
-          </div>
         )}
+          </div>
       </div>
       {/* MAP */}
       <div className="bg-gray-800 p-4 rounded-xl h-fit  top-6">
