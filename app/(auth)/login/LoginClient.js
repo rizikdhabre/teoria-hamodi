@@ -6,19 +6,45 @@ import { motion, AnimatePresence } from 'framer-motion';
 import HeartAnimation from '@/components/ui/HeartAnimation';
 import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
+import { Eye, EyeOff } from 'lucide-react';
 
-function Input({ label, type, name }) {
+function Input({ label, type, name, rightIcon }) {
   return (
     <div className="relative">
       <input
         type={type}
         required
         name={name}
-        className="w-full bg-transparent border-b-2 border-white focus:border-[#e46033] outline-none px-1 pt-3 pb-1 peer"
+        className="
+          w-full bg-transparent
+          border-b-2 border-white
+          focus:border-[#e46033]
+          outline-none
+          px-1 pt-3 pb-1
+          peer
+          pr-8
+        "
       />
-      <label className="absolute left-0 top-1/2 -translate-y-1/2 text-white peer-focus:-top-1.25 peer-valid:-top-1.25 peer-focus:text-[#e46033] peer-valid:text-[#e46033] transition-all">
+
+      <label
+        className="
+          absolute left-0 top-1/2 -translate-y-1/2
+          text-white
+          peer-focus:-top-1.25
+          peer-valid:-top-1.25
+          peer-focus:text-[#e46033]
+          peer-valid:text-[#e46033]
+          transition-all
+        "
+      >
         {label}
       </label>
+
+      {rightIcon && (
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-600 cursor-pointer">
+          {rightIcon}
+        </div>
+      )}
     </div>
   );
 }
@@ -36,6 +62,7 @@ function Button({ text }) {
 }
 
 export default function LoginClient() {
+  const [showPassword, setShowPassword] = useState(false);
   const [fetchError, setFetchError] = useState('');
   const [fetchedPassword, setFetchedPassword] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -147,7 +174,26 @@ export default function LoginClient() {
               <h2 className="text-2xl font-bold text-center mb-3">דף כניסה</h2>
               <form onSubmit={handleSignin} className="flex flex-col gap-4">
                 <Input label="שם משתמש" type="text" name="username" />
-                <Input label="סיסמה" type="password" name="password" />
+                <Input
+                  label="סיסמה"
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  rightIcon={
+                    showPassword ? (
+                      <EyeOff
+                        size={20}
+                        className="cursor-pointer text-gray-400 hover:text-orange-500"
+                        onClick={() => setShowPassword(false)}
+                      />
+                    ) : (
+                      <Eye
+                        size={20}
+                        className="cursor-pointer text-gray-400 hover:text-orange-500"
+                        onClick={() => setShowPassword(true)}
+                      />
+                    )
+                  }
+                />
                 {loginError && (
                   <p className="text-sm text-red-500 text-center">
                     {loginError}
