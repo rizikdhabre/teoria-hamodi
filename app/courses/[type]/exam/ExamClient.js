@@ -114,6 +114,7 @@ export default function ExamClient({ type, questions }) {
 
       if (userKey !== correctKey) {
         wrong.push({
+          number: i + 1,
           id: q.id,
           question: q.question,
           image: q.hasImage ? q.image : null,
@@ -142,13 +143,17 @@ export default function ExamClient({ type, questions }) {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full border border-gray-700 text-sm">
+            <table className="w-full table-fixed border border-gray-700 text-sm">
               <thead className="bg-gray-800">
                 <tr>
-                  <th className="border border-gray-700 p-2">שאלה</th>
-                  <th className="border border-gray-700 p-2">תמונה</th>
-                  <th className="border border-gray-700 p-2">התשובה הנכונה</th>
-                  <th className="border border-gray-700 p-2">התשובה שלך</th>
+                  <th className="border border-gray-700 p-2 w-[20%]">שאלה</th>
+                  <th className="border border-gray-700 p-2 w-[40%]">תמונה</th>
+                  <th className="border border-gray-700 p-2 w-[20%]">
+                    התשובה הנכונה
+                  </th>
+                  <th className="border border-gray-700 p-2 w-[20%]">
+                    התשובה שלך
+                  </th>
                 </tr>
               </thead>
 
@@ -156,10 +161,9 @@ export default function ExamClient({ type, questions }) {
                 {results.map((r) => (
                   <tr key={r.id} className="text-center">
                     <td className="border border-gray-700 p-2">
-                      {r.id}. {r.question}
+                      {r.number}. {r.question}
                     </td>
-
-                    <td className="border border-gray-700 p-6">
+                    <td className="border border-gray-700 p-2 w-[40%] h-[220px]">
                       {r.image ? (
                         <img
                           src={`/question-images/${type}/${r.image}`}
@@ -170,14 +174,15 @@ export default function ExamClient({ type, questions }) {
                             )
                           }
                           className="
-                              mx-auto
-                              max-h-48
-                              md:max-h-64
-                              cursor-pointer
-                              rounded
-                              hover:scale-105
-                              transition
-                            "
+                                          mx-auto
+                                          h-[90%]
+                                          w-auto
+                                          object-contain
+                                          cursor-pointer
+                                          rounded
+                                          hover:scale-105
+                                          transition
+                                        "
                         />
                       ) : (
                         '—'
@@ -246,6 +251,36 @@ export default function ExamClient({ type, questions }) {
         <div className="text-red-400 font-mono text-lg">
           ⏱ {formatTime(timeLeft)}
         </div>
+        <button onClick={submitExam} className="mt-4  p-2 bg-green-600 rounded">
+          הגש
+        </button>
+      </div>
+      {/* MAP */}
+      <div className="bg-gray-800 p-4 rounded-xl h-fit  top-6">
+        <h3 className="font-bold mb-4 text-center">מפת המבחן</h3>
+
+        <div className="space-y-2">
+          {Array.from({ length: totalPages }).map((_, i) => {
+            const from = i * PAGE_SIZE + 1;
+            const to = Math.min((i + 1) * PAGE_SIZE, questions.length);
+
+            return (
+              <button
+                key={i}
+                onClick={() => setCurrentPage(i)}
+                className={`w-full py-2 rounded
+                    ${
+                      currentPage === i
+                        ? 'bg-blue-600'
+                        : 'bg-gray-700 hover:bg-gray-600'
+                    }
+                  `}
+              >
+                {from}–{to}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -266,41 +301,6 @@ export default function ExamClient({ type, questions }) {
               />
             );
           })}
-        </div>
-
-        {/* MAP */}
-        <div className="bg-gray-800 p-4 rounded-xl h-fit sticky top-6">
-          <h3 className="font-bold mb-4 text-center">מפת המבחן</h3>
-
-          <div className="space-y-2">
-            {Array.from({ length: totalPages }).map((_, i) => {
-              const from = i * PAGE_SIZE + 1;
-              const to = Math.min((i + 1) * PAGE_SIZE, questions.length);
-
-              return (
-                <button
-                  key={i}
-                  onClick={() => setCurrentPage(i)}
-                  className={`w-full py-2 rounded
-                    ${
-                      currentPage === i
-                        ? 'bg-blue-600'
-                        : 'bg-gray-700 hover:bg-gray-600'
-                    }
-                  `}
-                >
-                  {from}–{to}
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            onClick={submitExam}
-            className="mt-4 w-full py-2 bg-green-600 rounded"
-          >
-            הגש מבחן
-          </button>
         </div>
       </div>
     </div>

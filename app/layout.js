@@ -5,6 +5,13 @@ import ClientProviders from './Providers/ClientProviders';
 import { cookies } from 'next/headers';
 import WhatsAppButton from '@/components/WhatsAppButton';
 
+export const metadata = {
+  title: 'Hamodi Theory | חמודי תיאוריה | حمودي تيؤريا',
+  description:
+    'Hamodi Theory - Driving theory explanations and lessons. חמודי תיאוריה | حمودي تيؤريا',
+  metadataBase: new URL('https://theory-hamodi.com'),
+};
+
 
 export default async function RootLayout({ children }) {
   const cookieStore = await cookies();
@@ -39,6 +46,26 @@ export default async function RootLayout({ children }) {
                 } catch (e) {}
               })();
             `,
+          }}
+        />
+
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "Hamodi Theory",
+              alternateName: [
+                "Hamodi Teuria",
+                "Hamodi Theory",
+                "חמודי תיאוריה",
+                "תיאוריה חמודי",
+                "حمودي تيؤريا",
+                "تيؤريا حمودي"
+              ],
+              url: "https://theory-hamodi.com"
+            }),
           }}
         />
       </head>
