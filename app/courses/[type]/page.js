@@ -20,8 +20,7 @@ export default async function CoursePage({ params }) {
             </thead>
             <tbody className="bg-gray-800">
 
-              {/* ALWAYS */}
-              <tr className="border-t border-gray-700">
+              {!isSeaCourse &&  <tr className="border-t border-gray-700">
                 <td className="p-2">
                   <a
                     href="https://www.theorytest.org.il/"
@@ -32,7 +31,7 @@ export default async function CoursePage({ params }) {
                   </a>
                 </td>
                 <td className="p-2">תור לקביעת תיאוריה</td>
-              </tr>
+              </tr>}
 
               {/* ONLY FOR BOAT / JETSKI */}
               {isSeaCourse && (

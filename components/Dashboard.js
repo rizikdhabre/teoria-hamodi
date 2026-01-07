@@ -64,13 +64,13 @@ export default function HomePage() {
       courses: [
         {
           id: 'motorcycle',
-          name: 'אופנוע',
+          name: ' אופנוע A',
           image: '/images/motorcycle.jpg',
           link: '/courses/motorcycle',
         },
         {
           id: 'car',
-          name: 'רכב פרטי',
+          name: 'רכב פרטי B',
           image: '/images/privateCar.jpg',
           link: '/courses/car',
         },
@@ -98,13 +98,13 @@ export default function HomePage() {
       courses: [
         {
           id: 'bus',
-          name: 'אוטובוס',
+          name: 'אוטובוס D',
           image: '/images/bus.jpg',
           link: '/courses/bus',
         },
         {
           id: 'tractor',
-          name: 'טרקטור',
+          name: 'טרקטור 1',
           image: '/images/tractor.jpg',
           link: '/courses/tractor',
         },
