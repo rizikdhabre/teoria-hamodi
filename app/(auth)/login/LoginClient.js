@@ -199,15 +199,7 @@ export default function LoginClient() {
                     {loginError}
                   </p>
                 )}
-                <button
-                  type="button"
-                  className="text-sm text-right text-gray-100 hover:text-orange-600 hover:underline transition cursor-pointer"
-                >
-                  שכחת סיסמה?
-                </button>
                 <Button text="כניסה" />
-                <p className="text-sm text-center">אין לך חשבון?</p>
-
                 <button
                   type="button"
                   onClick={() => router.push('/login?mode=fetchPassword')}
