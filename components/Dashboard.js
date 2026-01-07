@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
   const { data: session, status } = useSession();
@@ -17,14 +17,13 @@ export default function HomePage() {
   const fadeDuration = 1.2;
   const intervalMs = 7000;
 
-
   const handleCourses = (link) => {
     if (status === 'authenticated') {
       router.push(link);
     } else {
       router.push('/login');
     }
-  }
+  };
 
   useEffect(() => {
     const dir = document.documentElement.dir || 'ltr';
@@ -59,20 +58,72 @@ export default function HomePage() {
     return "url('/images/bg3.jpg')";
   };
 
-  const courses = [
+  const courseGroups = [
     {
-      name: 'אופנוע',
-      image: '/images/motorcycle.jpg',
-      link: '/courses/motorcycle',
+      title: '🚗 רכב ואופנוע',
+      courses: [
+        {
+          id: 'motorcycle',
+          name: 'אופנוע',
+          image: '/images/motorcycle.jpg',
+          link: '/courses/motorcycle',
+        },
+        {
+          id: 'car',
+          name: 'רכב פרטי',
+          image: '/images/privateCar.jpg',
+          link: '/courses/car',
+        },
+      ],
     },
-    { name: 'רכב פרטי', image: '/images/privateCar.jpg', link: '/courses/car' },
-    { name: ' C1 משאית', image: '/images/truck.jpg', link: '/courses/truck' },
-    { name: 'אוטובוס', image: '/images/bus.jpg', link: '/courses/bus' },
-    { name: 'אופנוע ים', image: '/images/jetski.jpg', link: '/courses/jetski' },
-    { name: 'טרקטור', image: '/images/tractor.jpg', link: '/courses/tractor' },
-    { name: 'מונית', image: '/images/taxi.jpg', link: '/courses/taxi' },
-     { name: 'משאית C', image: '/images/cTruckPhoto.jpg', link: '/courses/cTruck' },
+    {
+      title: '🚚 משאית',
+      courses: [
+        {
+          id: 'truck-c1',
+          name: 'משאית C1',
+          image: '/images/truck.jpg',
+          link: '/courses/truck',
+        },
+        {
+          id: 'c-truck',
+          name: 'משאית C',
+          image: '/images/cTruckPhoto.jpg',
+          link: '/courses/cTruck',
+        },
+      ],
+    },
+    {
+      title: '🚌 אוטובוס ו 🚜 טרקטור',
+      courses: [
+        {
+          id: 'bus',
+          name: 'אוטובוס',
+          image: '/images/bus.jpg',
+          link: '/courses/bus',
+        },
+        {
+          id: 'tractor',
+          name: 'טרקטור',
+          image: '/images/tractor.jpg',
+          link: '/courses/tractor',
+        },
+      ],
+    },
+    {
+      title: '🌊 רישיונות ים',
+      courses: [
+        {
+          id: 'jetski',
+          name: 'אופנוע ים',
+          image: '/images/jetski.jpg',
+          link: '/courses/jetski',
+        },
+      ],
+    },
   ];
+
+  const topButtons = courseGroups.flatMap((group) => group.courses);
 
   const advantages = [
     { icon: '📘', text: 'שיעורים פשוטים וברורים' },
@@ -139,7 +190,7 @@ export default function HomePage() {
           className="relative z-10 max-w-4xl mx-auto px-6"
         >
           <motion.h1
-            className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight"
+            className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight mt-10"
             initial={{ scale: 1.5, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -165,7 +216,7 @@ export default function HomePage() {
               visible: { transition: { staggerChildren: 0.75 } },
             }}
           >
-            {courses.map((c) => (
+            {topButtons.map((c) => (
               <motion.div
                 key={c.name}
                 variants={{
@@ -173,7 +224,16 @@ export default function HomePage() {
                   visible: { opacity: 1, y: 0 },
                 }}
               >
-                <button className="px-6 py-3 bg-white text-blue-700 font-semibold rounded-md shadow hover:scale-105 transition-transform">
+                <button
+                  onClick={() => {
+                    const el = document.getElementById(c.id);
+                    el?.scrollIntoView({
+                      behavior: 'smooth',
+                      block: 'start',
+                    });
+                  }}
+                  className="px-6 py-3 bg-white text-blue-700 font-semibold rounded-md shadow hover:scale-105 transition-transform"
+                >
                   {c.name}
                 </button>
               </motion.div>
@@ -202,34 +262,51 @@ export default function HomePage() {
 
       {/* Courses */}
       <section className="py-16 px-6">
-        <h2 className="text-3xl font-bold text-center mb-10">
+        <h2 className="text-3xl font-bold text-center mb-14">
           בחר את הקורס שלך
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-          {courses.map((course) => (
-            <div
-              key={course.name}
-              className="bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:scale-105 transition-transform"
-            >
-              <div className="relative w-full h-80">
-                <Image
-                  src={course.image}
-                  alt={course.name}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div className="p-6 text-center">
-                <h3 className="text-xl font-semibold mb-3">{course.name}</h3>
-                  <button 
-                  onClick={() => handleCourses(course.link)}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md">
-                    התחל עכשיו
-                  </button>
-              </div>
+
+        {courseGroups.map((group) => (
+          <div key={group.title} className="mb-20">
+            {/* Group title */}
+            <h3 className="text-2xl font-bold mb-8 border-b border-gray-600 pb-2">
+              {group.title}
+            </h3>
+
+            {/* Courses grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+              {group.courses.map((course) => (
+                <div
+                  key={course.id}
+                  id={course.id}
+                  className="bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:scale-105 transition-transform scroll-mt-24"
+                >
+                  <div className="relative w-full h-80">
+                    <Image
+                      src={course.image}
+                      alt={course.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+
+                  <div className="p-6 text-center">
+                    <h4 className="text-xl font-semibold mb-3">
+                      {course.name}
+                    </h4>
+
+                    <button
+                      onClick={() => handleCourses(course.link)}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md"
+                    >
+                      התחל עכשיו
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </section>
 
       {/* Call to Action */}

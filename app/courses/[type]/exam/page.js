@@ -1,9 +1,12 @@
 import { getCollection } from '@/lib/db';
-import QuestionsClient from '../questions/QuestionsClient';
-export default async function QuestionsPage({ params }) {
-  const { type } = await params;
+import ExamClient from './ExamClient';
+
+export default async function ExamPage({ params }) {
+  const { type } = params;
+
   const collection = await getCollection(`${type}questions`);
   const length = await collection.countDocuments();
+
   function randomNumbers() {
     const set = new Set();
     while (set.size < 30) {
@@ -21,12 +24,7 @@ export default async function QuestionsPage({ params }) {
 
   return (
     <div className="pt-10">
-      <QuestionsClient
-        type={type}
-        initialQuestions={questions}
-        initialOffset={30}
-        isexam={true}
-      />
+      <ExamClient type={type} questions={questions} />
     </div>
   );
 }

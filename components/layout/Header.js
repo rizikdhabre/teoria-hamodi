@@ -21,8 +21,6 @@ export default function Header() {
 
   const logoMenuRef = useRef(null);
 
-
-
   // close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -158,15 +156,18 @@ export default function Header() {
                   onClick={() => setOpenLogo((prev) => !prev)}
                   className="focus:outline-none"
                 >
-                  
                   <img
-                    src={session.user.image ||  '/images/avatar.png' ||'/avatar.png'}
+                    src={
+                      session.user.image ||
+                      '/images/avatar.png' ||
+                      '/avatar.png'
+                    }
                     alt="Profile"
                     className="w-10 h-10 rounded-full object-cover ring-2 ring-white/30 hover:ring-white/60 transition"
                   />
                 </button>
-                <span className="font-semibold text-white" data-no-translate >
-                  {`שלום, ${session.user.firstName || session.user.username||session.user.name}`}
+                <span className="font-semibold text-white">
+                  ברוך הבא -חמודי תיאוריה
                 </span>
               </div>
 
@@ -182,25 +183,6 @@ export default function Header() {
       z-50 overflow-hidden
     "
                 >
-                  {/* Profile */}
-                  <Link
-                    href="/profile"
-                    onClick={() => setOpenLogo(false)}
-                    className="
-        flex items-center justify-center gap-2
-        px-5 py-3 text-sm font-medium
-        text-gray-800
-        hover:bg-gray-100/80
-        transition
-      "
-                  >
-                    <span>פרופיל</span>
-                    <span className="text-purple-600">👤</span>
-                  </Link>
-
-                  {/* Divider */}
-                  <div className="mx-6 h-px bg-gray-200/70" />
-
                   {/* Logout */}
                   <button
                     onClick={() => signOut({ callbackUrl: '/' })}
@@ -245,42 +227,6 @@ export default function Header() {
             <span className="w-6 h-0.5 bg-white"></span>
             <span className="w-6 h-0.5 bg-white"></span>
           </button>
-
-          {/* Search */}
-          <div className="flex items-center gap-2">
-            {/* Mobile: Search Icon only */}
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="
-                    md:hidden
-                    p-2 rounded-full
-                    text-white
-                    hover:bg-gray-100
-                    transition
-                  "
-              aria-label="Open search"
-            >
-              <FiSearch className="text-lg" />
-            </button>
-
-            {/* Desktop: Search Input */}
-            <input
-              type="text"
-              placeholder="Search..."
-              readOnly
-              onClick={() => setSearchOpen(true)}
-              onFocus={() => setSearchOpen(true)}
-              className="
-                    hidden md:block
-                    w-36 md:w-60
-                    px-3 py-2 rounded-full text-sm
-                    text-black cursor-pointer
-                    border border-gray-300
-                    focus:outline-none focus:ring-2 focus:ring-blue-500
-                    placeholder-gray-500
-                  "
-            />
-          </div>
 
           {/* Language Dropdown */}
           <div className="relative" ref={menuRef} data-no-translate>
@@ -345,31 +291,6 @@ export default function Header() {
         )}
       </header>
 
-      {/* SEARCH OVERLAY */}
-      {searchOpen && (
-        <div
-          data-no-translate
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm
-                     flex items-center justify-center z-50"
-        >
-          <div className="w-11/12 md:w-1/2 relative text-white">
-            <input
-              type="text"
-              autoFocus
-              placeholder="Type to search..."
-              className="w-full px-5 py-3 text-lg rounded-full text-white
-                         focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-white placeholder:text-center"
-            />
-            <button
-              onClick={() => setSearchOpen(false)}
-              className="absolute right-3 top-1/2 -translate-y-1/2
-                         text-gray-500 hover:text-gray-700 text-xl "
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
     </>
   );
 }

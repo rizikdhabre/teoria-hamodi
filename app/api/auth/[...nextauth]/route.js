@@ -1,60 +1,58 @@
 import NextAuth from 'next-auth';
-import FacebookProvider from 'next-auth/providers/facebook';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { getCollection } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 
 export const authOptions = {
   providers: [
-    // 🔵 FACEBOOK LOGIN
-    FacebookProvider({
-      clientId: process.env.FACEBOOK_CLIENT_ID,
-      clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
-    }),
-
-    // 🟢 LOCAL LOGIN (username OR email)
     CredentialsProvider({
-      name: 'Credentials',
-      credentials: {
-        identifier: { label: 'Username or Email', type: 'text' },
-        password: { label: 'Password', type: 'password' },
-      },
+      name: 'Admin Credentials',
 
+      credentials: {
+        username: { label: 'identifier:', type: 'text' },
+        password: { label: 'password:', type: 'password' },
+      },
+  
       async authorize(credentials) {
         if (!credentials?.identifier || !credentials?.password) {
-          return null;
+          throw new Error('נא למלא את כל השדות');
+        }
+
+        // 🔒 admin only
+        if (credentials.identifier !== 'admin') {
+          throw new Error('שם משתמש שגוי');
         }
 
         const users = await getCollection('users');
+        const admin = await users.findOne({ username: 'admin' });
 
-        const user = await users.findOne({
-          $or: [
-            { email: credentials.identifier },
-            { username: credentials.identifier },
-          ],
-        });
-
-        // User not found or not local
-        if (!user || user.provider !== 'local') {
-          throw new Error('שם משתמש לא קיים');
+        if (!admin || !admin.passwordHash || !admin.passwordExpiresAt) {
+          throw new Error('משתמש אדמין לא קיים');
         }
 
-        // Check password
+        // ✅ 1) Check expiration FIRST (ignore the submitted password if expired)
+        const now = new Date();
+        const expiresAt = new Date(admin.passwordExpiresAt);
+
+        if (now > expiresAt) {
+          // ❌ deny login (password was rotated)
+          throw new Error('הסיסמה פגה תוקף. קח סיסמה חדשה מהמנהל');
+        }
+
+        // ✅ 2) Only if NOT expired → verify password
         const isValid = await bcrypt.compare(
           credentials.password,
-          user.passwordHash
+          admin.passwordHash
         );
 
         if (!isValid) {
           throw new Error('סיסמה שגויה');
         }
+        // ✅ login allowed
         return {
-          id: user._id.toString(),
-          email: user.email,
-          username: user.username,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: user.role,
+          id: admin._id.toString(),
+          username: 'admin',
+          role: 'admin',
         };
       },
     }),
@@ -62,7 +60,7 @@ export const authOptions = {
 
   session: {
     strategy: 'jwt',
-    maxAge: 2 * 60 * 60,
+    maxAge: 2 * 60 * 60, // 2 hours
   },
 
   jwt: {
@@ -74,64 +72,18 @@ export const authOptions = {
   },
 
   callbacks: {
-    // 🔐
-    async signIn({ user, account }) {
-      if (account.provider === 'credentials') {
-        return true; // already validated
-      }
-
-      try {
-        const users = await getCollection('users');
-
-        const existingUser = await users.findOne({
-          email: user.email,
-        });
-
-        if (!existingUser) {
-          const [firstName = '', ...rest] = (user.name || '').split(' ');
-          const lastName = rest.join(' ');
-
-          await users.insertOne({
-            email: user.email,
-            username: user.email.split('@')[0], // auto username
-            firstName,
-            lastName,
-            provider: account.provider,
-            role: 'user',
-            passwordHash: null,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
-        }
-
-        return true;
-      } catch (error) {
-        console.error('error in signIn callback', error);
-        return false;
-      }
-    },
-
-    // 🔑 Attach data to JWT
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = user.role;
-        token.firstName = user.firstName;
-        token.lastName = user.lastName;
         token.username = user.username;
-        token.email = user.email;
+        token.role = user.role;
       }
       return token;
     },
 
-    // 📦 Expose data to frontend
     async session({ session, token }) {
-      session.user.role = token.role;
-      session.user.firstName = token.firstName;
-      session.user.lastName = token.lastName;
       session.user.username = token.username;
-      session.user.email = token.email;
-
+      session.user.role = token.role;
       return session;
     },
   },

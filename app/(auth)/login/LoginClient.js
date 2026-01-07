@@ -2,13 +2,10 @@
 
 import { signIn } from 'next-auth/react';
 import { useEffect, useState } from 'react';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import HeartAnimation from '@/components/ui/HeartAnimation';
-import { FaFacebookF, FaGoogle } from 'react-icons/fa';
-import {  useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
-
 
 function Input({ label, type, name }) {
   return (
@@ -39,66 +36,36 @@ function Button({ text }) {
 }
 
 export default function LoginClient() {
-
-
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [registerError, setRegisterError] = useState('');
+  const [fetchError, setFetchError] = useState('');
+  const [fetchedPassword, setFetchedPassword] = useState('');
   const [loginError, setLoginError] = useState('');
-    const router = useRouter();
+  const router = useRouter();
   const searchParams = useSearchParams();
 
-  function validateRegisterBody(body) {
-    if (!body) return false;
-
-    const { username, email, password } = body;
-
-    // Check for null / undefined / empty strings
-    if (!username?.trim() || !email?.trim() || !password?.trim()) {
-      return false;
-    }
-
-    // Email regex (safe + commonly used)
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailRegex.test(email)) {
-      return false;
-    }
-
-    return true;
-  }
-  const handleSubmitRegister = async (e) => {
+  const handleFetchPassword = async (e) => {
     e.preventDefault();
-    setRegisterError('');
+    setFetchError('');
+    setFetchedPassword('');
 
     const formData = new FormData(e.target);
+    const pin = formData.get('pin');
+    const username = formData.get('username');
 
-    const body = {
-      username: formData.get('username'),
-      email: formData.get('email'),
-      password: formData.get('password'),
-    };
+    console.log('Fetching password for:', username, pin);
 
-    if (!validateRegisterBody(body)) {
-      setRegisterError('אנא מלא את כל השדות כראוי.');
+    if (!pin || !username) {
+      setFetchError('אנא מלא את כל השדות');
       return;
     }
 
     try {
-      await axios.post('/api/signup', body);
-
-      // SUCCESS
-      router.push('/login');
-    } catch (error) {
-      const status = error.response?.status;
-      if (status === 409) {
-        // email or username already exists
-        setRegisterError('האימייל או שם המשתמש כבר בשימוש');
-      } else if (status === 400) {
-        setRegisterError('קלט לא תקין');
-      } else {
-        setRegisterError('אירעה שגיאה במהלך ההרשמה. אנא נסה שוב.');
-      }
+      const res = await axios.post('/api/admin/fetchPassword', {
+        username,
+        pin,
+      });
+      setFetchedPassword(res.data.password);
+    } catch (err) {
+      setFetchError(err.response?.data?.error);
     }
   };
 
@@ -107,23 +74,23 @@ export default function LoginClient() {
     const formData = new FormData(e.target);
     const identifier = formData.get('username');
     const password = formData.get('password');
-    // i will use nextAuth login 
-   const res= await signIn('credentials', {
+    // i will use nextAuth login
+    const res = await signIn('credentials', {
       identifier,
       password,
-      redirect: false, 
+      redirect: false,
     });
 
-    if(res.error){
-      setLoginError(res.error)
-      return
+    if (res.error) {
+      setLoginError(res.error);
+      return;
     }
     router.push('/');
   };
 
   // 🔹 STATE DERIVED FROM URL
   const mode = searchParams.get('mode');
-  const isRegister = mode === 'register';
+  const isFetchPassword = mode === 'fetchPassword';
 
   const colors = ['pink', 'white'];
   const [colorIndex, setColorIndex] = useState(0);
@@ -151,8 +118,8 @@ export default function LoginClient() {
         <motion.div
           initial={{ rotate: 10, skewY: 40 }}
           animate={{
-            rotate: isRegister ? 0 : 10,
-            skewY: isRegister ? 0 : 40,
+            rotate: isFetchPassword ? 0 : 10,
+            skewY: isFetchPassword ? 0 : 40,
           }}
           transition={{ duration: 1.2, ease: 'easeInOut' }}
           className="absolute right-0 top-[-5px] h-[600px] w-[850px] bg-linear-to-br from-[#25252c] to-[#ffffff] origin-bottom-right"
@@ -161,8 +128,8 @@ export default function LoginClient() {
         <motion.div
           initial={{ rotate: 0, skewY: 0 }}
           animate={{
-            rotate: isRegister ? -11 : 0,
-            skewY: isRegister ? -41 : 0,
+            rotate: isFetchPassword ? -11 : 0,
+            skewY: isFetchPassword ? -41 : 0,
           }}
           transition={{ duration: 1.2, ease: 'easeInOut' }}
           className="absolute left-[250px] top-full h-[700px] w-[850px] bg-[#25252b] border-t-4 border-[#ffffff] origin-bottom-left"
@@ -170,7 +137,7 @@ export default function LoginClient() {
 
         {/* LOGIN FORM */}
         <AnimatePresence mode="wait">
-          {!isRegister && (
+          {!isFetchPassword && (
             <motion.div
               key="login"
               initial={{ x: 0, opacity: 1 }}
@@ -195,80 +162,66 @@ export default function LoginClient() {
                   שכחת סיסמה?
                 </button>
                 <Button text="כניסה" />
-
-                <div className="flex justify-center gap-4 mt-2">
-                  <button
-                    onClick={() => signIn('facebook', { callbackUrl: '/' })}
-                    className="px-4 py-2 rounded-full border-2 border-blue-500 text-blue-500 hover:bg-blue-600 hover:text-white"
-                  >
-                    <FaFacebookF />
-                  </button>
-                  <button className="px-4 py-2 rounded-full border-2 border-red-500 text-red-500 hover:bg-red-600 hover:text-white">
-                    <FaGoogle />
-                  </button>
-                </div>
-
                 <p className="text-sm text-center">אין לך חשבון?</p>
 
                 <button
                   type="button"
-                  onClick={() => router.push('/login?mode=register')}
+                  onClick={() => router.push('/login?mode=fetchPassword')}
                   className="text-orange-600 font-semibold hover:underline"
                 >
-                  הרשמה
+                  סיסמה חודשית
                 </button>
               </form>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* REGISTER FORM */}
+        {/* FETCH PASSWORD FORM */}
         <AnimatePresence mode="wait">
-          {isRegister && (
+          {isFetchPassword && (
             <motion.div
-              key="register"
+              key="fetch-password"
               initial={{ x: 150, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: 150, opacity: 0.7 }}
               transition={{ duration: 0.7 }}
               className="absolute top-0 right-0 w-1/2 h-full flex flex-col justify-center px-12"
             >
-              <h2 className="text-3xl font-bold text-center mb-4">הרשמה</h2>
+              <h2 className="text-3xl font-bold text-center mb-4">
+                סיסמה חודשית
+              </h2>
 
               <form
                 className="flex flex-col gap-6"
-                onSubmit={handleSubmitRegister}
+                onSubmit={handleFetchPassword}
               >
                 <Input label="שם משתמש" type="text" name="username" />
-                <Input label="אימייל" type="email" name="email" />
-                <div className="relative">
-                  <Input
-                    label="סיסמה"
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 "
-                  >
-                    {showPassword ? <FaEyeSlash /> : <FaEye />}
-                  </button>
-                </div>
-                {registerError && (
+
+                {/* PIN */}
+                <Input label="קוד PIN" type="password" name="pin" />
+
+                {fetchError && (
                   <p className="text-sm text-red-500 text-center">
-                    {registerError}
+                    {fetchError}
                   </p>
                 )}
-                <Button text="הרשמה" />
+                <Button text="קבלת סיסמה" />
               </form>
 
-              <p className="text-sm text-center m-2">יש לכך חשבון?</p>
-
+              {fetchedPassword && (
+                <div className="mt-4 text-center bg-black/30 p-3 rounded">
+                  <p className="text-sm text-gray-300 mb-1">
+                    הסיסמה החדשה שלך:
+                  </p>
+                  <p className="text-lg font-mono text-[#e46033] select-all">
+                    {fetchedPassword}
+                  </p>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => router.push('/login')}
-                className="text-[#e46033] font-semibold hover:underline"
+                className="text-[#e46033] font-semibold hover:underline p-5"
               >
                 כניסה
               </button>
@@ -278,7 +231,7 @@ export default function LoginClient() {
 
         {/* INFO PANEL */}
         <AnimatePresence mode="wait">
-          {!isRegister ? (
+          {!isFetchPassword ? (
             <motion.div
               key="info-login"
               initial={{ x: 0, opacity: 1 }}

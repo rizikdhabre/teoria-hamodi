@@ -1,24 +1,20 @@
-import { getCollection } from "@/lib/db";
+import { fetchQuestionsByRange, fetchQuestionsCount } from "../actions";
 import QuestionsClient from "./QuestionsClient";
+
 export default async function QuestionsPage({ params }) {
-  const { type } = await params;
+  const { type } = params;
 
-  const collection = await getCollection(`${type}questions`);
-
-const questions = await collection
-  .find({}, { projection: { _id: 0 } })
-  .sort({ id: 1 })
-  .limit(40)
-  .toArray();
+  const [initialQuestions, totalCount] = await Promise.all([
+    fetchQuestionsByRange(type, 1, 10),
+    fetchQuestionsCount(type),
+  ]);
 
   return (
-<div className="pt-10">
-      <QuestionsClient
+    <QuestionsClient
       type={type}
-      initialQuestions={questions}
-      initialOffset={40}
-      isexam={false}
+      initialQuestions={initialQuestions}
+      totalCount={totalCount}
+      rangeSize={10}
     />
-</div>
   );
 }
