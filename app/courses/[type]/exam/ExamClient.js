@@ -40,12 +40,61 @@ function ExamQuestion({ question, type, selected, onSelect, number }) {
     </div>
   );
 }
+const EXAM_CONFIG = {
+  car: {
+    questionNumber: 30,
+    allowedWrong: 4,
+    time: 40 * 60,
+    title: 'מבחן רכב פרטי',
+  },
+  cTruck: {
+    questionNumber: 30,
+    allowedWrong: 4,
+    time: 40 * 60,
+    title: 'מבחן משאית קלה',
+  },
+  truck: {
+    questionNumber: 30,
+    allowedWrong: 4,
+    time: 40 * 60,
+    title: 'מבחן משאית',
+  },
+  bus: {
+    questionNumber: 30,
+    allowedWrong: 4,
+    time: 40 * 60,
+    title: 'מבחן אוטובוס',
+  },
+  tractor: {
+    questionNumber: 30,
+    allowedWrong: 4,
+    time: 40 * 60,
+    title: 'מבחן טרקטור',
+  },
+  jetski: {
+    allowedWrong: 4, // רגילות
+    mandatoryAllowedWrong: 0, // חובה – אפס טעויות
+    time: 60 * 60,
+    title: 'מבחן אופנוע ים',
+  },
+
+  boat: {
+    allowedWrong: 9, // רגילות
+    mandatoryAllowedWrong: 0, // חובה – אפס טעויות
+    time: 60 * 60,
+    title: 'מבחן כלי שיט',
+  },
+};
 
 /* ---------------- Main Exam Client ---------------- */
 
 export default function ExamClient({ type, questions }) {
   const [previewImage, setPreviewImage] = useState(null);
-  const EXAM_TIME = 40 * 60;
+  const config = EXAM_CONFIG[type];
+  let EXAM_TIME = 40 * 60;
+  if (type === 'boat' || type === 'jetski') {
+    EXAM_TIME = 60 * 60;
+  }
   const PAGE_SIZE = 10;
 
   const totalPages = Math.ceil(questions.length / PAGE_SIZE);
@@ -243,17 +292,35 @@ export default function ExamClient({ type, questions }) {
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-6">
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold">
-          מבחן – שאלות {start + 1}–{Math.min(end, questions.length)}
-        </h2>
+      {/* HEADER */}
+      <div className="mb-6">
+        {/* Top row */}
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-bold">
+            מבחן – שאלות {start + 1}–{Math.min(end, questions.length)}
+          </h2>
 
-        <div className="text-red-400 font-mono text-lg">
-          ⏱ {formatTime(timeLeft)}
+          <div className="text-red-400 font-mono text-lg">
+            ⏱ {formatTime(timeLeft)}
+          </div>
+
+          <button onClick={submitExam} className="p-2 bg-green-600 rounded">
+            הגש
+          </button>
         </div>
-        <button onClick={submitExam} className="mt-4  p-2 bg-green-600 rounded">
-          הגש
-        </button>
+
+        {/* Rules row */}
+        {(type === 'boat' || type === 'jetski') && (
+          <div className="mt-2 flex gap-4 text-sm font-bold">
+            <span className="text-yellow-300">
+              טעויות רגילות מותרות: {config.allowedWrong}
+            </span>
+
+            <span className="text-red-400">
+              טעויות בשאלות חובה: {config.mandatoryAllowedWrong}
+            </span>
+          </div>
+        )}
       </div>
       {/* MAP */}
       <div className="bg-gray-800 p-4 rounded-xl h-fit  top-6">
