@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 /* ---------------- Exam Question Card ---------------- */
 
-function ExamQuestion({ question, type, selected, onSelect,number }) {
+function ExamQuestion({ question, type, selected, onSelect, number }) {
   return (
     <div className="bg-gray-800 p-5 rounded-xl mb-4">
       {question.hasImage && question.image && (
@@ -44,6 +44,7 @@ function ExamQuestion({ question, type, selected, onSelect,number }) {
 /* ---------------- Main Exam Client ---------------- */
 
 export default function ExamClient({ type, questions }) {
+  const [previewImage, setPreviewImage] = useState(null);
   const EXAM_TIME = 40 * 60;
   const PAGE_SIZE = 10;
 
@@ -109,9 +110,7 @@ export default function ExamClient({ type, questions }) {
       const correctKey = correctEntry?.[0] ?? null;
       const correctText = correctEntry?.[1]?.text ?? '';
 
-      const userText = userKey
-        ? q.options[userKey]?.text
-        : 'לא נענה';
+      const userText = userKey ? q.options[userKey]?.text : 'לא נענה';
 
       if (userKey !== correctKey) {
         wrong.push({
@@ -165,7 +164,20 @@ export default function ExamClient({ type, questions }) {
                         <img
                           src={`/question-images/${type}/${r.image}`}
                           alt=""
-                          className="max-h-30 "
+                          onClick={() =>
+                            setPreviewImage(
+                              `/question-images/${type}/${r.image}`
+                            )
+                          }
+                          className="
+                              mx-auto
+                              max-h-48
+                              md:max-h-64
+                              cursor-pointer
+                              rounded
+                              hover:scale-105
+                              transition
+                            "
                         />
                       ) : (
                         '—'
@@ -183,6 +195,38 @@ export default function ExamClient({ type, questions }) {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {previewImage && (
+          <div
+            className="
+      fixed inset-0 z-50 bg-black/90
+      flex items-center justify-center
+    "
+            onClick={() => setPreviewImage(null)}
+          >
+            {/* Close Button */}
+            <button
+              className="
+        absolute top-4 right-4
+        text-white text-3xl
+        font-bold
+      "
+              onClick={() => setPreviewImage(null)}
+            >
+              ✕
+            </button>
+
+            {/* Image */}
+            <img
+              src={previewImage}
+              alt=""
+              className="
+        max-w-full max-h-full
+        object-contain
+      "
+              onClick={(e) => e.stopPropagation()}
+            />
           </div>
         )}
       </div>
