@@ -181,10 +181,11 @@ export default function ExamClient({ type, questions }) {
   /* ---------------- Results ---------------- */
 
   if (examFinished) {
+    const wrongCount = results.filter(r => !r.isCorrect).length;
     return (
       <div className="min-h-screen bg-gray-900 text-gray-100 p-6">
         <h2 className="text-2xl font-bold mb-6 text-center">
-          סיכום טעויות ({results.length})
+         סיכום טעויות ({wrongCount})
         </h2>
 
         {results.length === 0 ? (
