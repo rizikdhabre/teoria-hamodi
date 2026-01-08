@@ -99,7 +99,6 @@ export default function LoginClient() {
     const formData = new FormData(e.target);
     const identifier1 = formData.get('username');
     const  identifier= identifier1.toLowerCase()
-    console.log(identifier)
     const password = formData.get('password');
     // i will use nextAuth login
     const res = await signIn('credentials', {
