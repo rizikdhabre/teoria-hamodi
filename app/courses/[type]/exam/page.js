@@ -4,28 +4,59 @@ import ExamClient from './ExamClient';
 export default async function ExamPage({ params }) {
   const { type } = params;
 
-  let size=30;
-  if(type==='boat'){
-    size=50;
-  }
+  let totalSize = type === 'boat' ? 50 : 30;
 
-  const collection = await getCollection(`${type}questions`);
-  const length = await collection.countDocuments();
+  const mainCollection = await getCollection(`${type}questions`);
 
-  function randomNumbers() {
+  // helper
+  function getRandomIds(max, count) {
     const set = new Set();
-    while (set.size < size) {
-      set.add(Math.floor(Math.random() * length) + 1);
+    while (set.size < count) {
+      set.add(Math.floor(Math.random() * max) + 1);
     }
     return [...set];
   }
 
-  const randomIds = randomNumbers();
+  let questions = [];
 
-  const questions = await collection
-    .find({ id: { $in: randomIds } }, { projection: { _id: 0 } })
-    .limit(size)
-    .toArray();
+  // 🚗 MIXED MODE (not boat & not jetski)
+  if (type !== 'boat' && type !== 'jetski') {
+    const carCollection = await getCollection('carquestions');
+
+    const carCount = await carCollection.countDocuments();
+    const mainCount = await mainCollection.countDocuments();
+
+    const carIds = getRandomIds(carCount, 25);
+    const mainIds = getRandomIds(mainCount, totalSize - 25); // 5
+
+    const carQuestions = (
+      await carCollection
+        .find({ id: { $in: carIds } }, { projection: { _id: 0 } })
+        .toArray()
+    ).map((q) => ({ ...q, source: 'car' }));
+
+    const mainQuestions = (
+      await mainCollection
+        .find({ id: { $in: mainIds } }, { projection: { _id: 0 } })
+        .toArray()
+    ).map((q) => ({ ...q, source: type }));
+
+    questions = [...carQuestions, ...mainQuestions];
+  }
+ 
+  else {
+    const count = await mainCollection.countDocuments();
+    const ids = getRandomIds(count, totalSize);
+
+    questions = (
+      await mainCollection
+        .find({ id: { $in: ids } }, { projection: { _id: 0 } })
+        .toArray()
+    ).map((q) => ({
+      ...q,
+      source: type, 
+    }));
+  }
 
   return (
     <div className="pt-10">

@@ -9,7 +9,7 @@ function ExamQuestion({ question, type, selected, onSelect, number }) {
     <div className="bg-gray-800 p-5 rounded-xl mb-4">
       {question.hasImage && question.image && (
         <img
-          src={`/question-images/${type}/${question.image}`}
+          src={`/question-images/${question.source}/${question.image}`}
           alt=""
           className="mb-4 max-h-60 rounded object-contain"
         />
@@ -78,7 +78,7 @@ const EXAM_CONFIG = {
     mandatoryAllowedWrong: 0, // חובה – אפס טעויות
     title: 'מבחן כלי שיט',
   },
-   motorcycle: {
+  motorcycle: {
     questionNumber: 30,
     allowedWrong: 4,
     title: 'מבחן אופנוע',
@@ -146,7 +146,7 @@ export default function ExamClient({ type, questions }) {
   /* ---------------- Submit Exam ---------------- */
 
   function submitExam() {
-    const wrong = [];
+    const results = [];
 
     questions.forEach((q, i) => {
       const userKey = answers[i];
@@ -158,21 +158,23 @@ export default function ExamClient({ type, questions }) {
       const correctKey = correctEntry?.[0] ?? null;
       const correctText = correctEntry?.[1]?.text ?? '';
 
-      const userText = userKey ? q.options[userKey]?.text : 'לא נענה';
+      const userText = userKey ? q.options[userKey]?.text : '';
 
-      if (userKey !== correctKey) {
-        wrong.push({
-          number: i + 1,
-          id: q.id,
-          question: q.question,
-          image: q.hasImage ? q.image : null,
-          correctAnswer: correctText,
-          userAnswer: userText,
-        });
-      }
+      const isCorrect = userKey === correctKey;
+
+      results.push({
+        number: i + 1,
+        id: q.id,
+        question: q.question,
+        image: q.hasImage ? q.image : null,
+        source: q.source,
+        correctAnswer: correctText,
+        userAnswer: userText,
+        isCorrect, // ✅ KEY FIELD
+      });
     });
 
-    setResults(wrong);
+    setResults(results);
     setExamFinished(true);
   }
 
@@ -194,55 +196,81 @@ export default function ExamClient({ type, questions }) {
             <table className="w-full table-fixed border border-gray-700 text-sm">
               <thead className="bg-gray-800">
                 <tr>
-                  <th className="border border-gray-700 p-2 w-[20%]">שאלה</th>
-                  <th className="border border-gray-700 p-2 w-[40%]">תמונה</th>
-                  <th className="border border-gray-700 p-2 w-[20%]">
+                  <th className="border border-gray-700 p-2 w-[40%]">שאלה</th>
+                  <th className="border border-gray-700 p-2 w-[32%]">
                     התשובה הנכונה
                   </th>
-                  <th className="border border-gray-700 p-2 w-[20%]">
+                  <th className="border border-gray-700 p-2 w-[28%]">
                     התשובה שלך
                   </th>
                 </tr>
               </thead>
-
               <tbody>
                 {results.map((r) => (
-                  <tr key={r.id} className="text-center">
-                    <td className="border border-gray-700 p-2">
-                      {r.number}. {r.question}
-                    </td>
-                    <td className="border border-gray-700 p-2 w-[40%] h-[220px]">
-                      {r.image ? (
+                  <tr key={r.id} className="align-top text-right">
+                    <td
+                      className="
+                      border border-gray-700 p-4
+                      whitespace-normal break-words leading-relaxed
+                      w-[45%]
+                                  "
+                      dir="rtl"
+                    >
+                      <div className="mb-3">
+                        <span className="font-bold ml-1">{r.number}.</span>
+                        {r.question}
+                      </div>
+
+                      {r.image && (
                         <img
-                          src={`/question-images/${type}/${r.image}`}
+                          src={`/question-images/${r.source}/${r.image}`}
                           alt=""
                           onClick={() =>
                             setPreviewImage(
-                              `/question-images/${type}/${r.image}`
+                              `/question-images/${r.source}/${r.image}`
                             )
                           }
                           className="
-                                          mx-auto
-                                          h-[90%]
-                                          w-auto
-                                          object-contain
-                                          cursor-pointer
-                                          rounded
-                                          hover:scale-105
-                                          transition
-                                        "
+              mx-auto
+              max-h-[180px]
+              w-auto
+              object-contain
+              cursor-pointer
+              rounded
+            "
                         />
-                      ) : (
-                        '—'
                       )}
                     </td>
 
-                    <td className="border border-gray-700 p-2 text-green-400">
+                    {/* CORRECT ANSWER (27.5%) */}
+                    <td
+                      className="
+          border border-gray-700 p-4
+          whitespace-normal break-words leading-relaxed
+          w-[27.5%]
+          text-green-400 font-bold
+        "
+                      dir="rtl"
+                    >
                       {r.correctAnswer}
                     </td>
 
-                    <td className="border border-gray-700 p-2 text-red-400">
-                      {r.userAnswer}
+                    {/* USER ANSWER (27.5%) */}
+                    <td
+                      className={`
+          border border-gray-700 p-4 font-bold
+          whitespace-normal break-words leading-relaxed
+          w-[27.5%]
+          text-center
+          ${r.isCorrect ? 'text-green-400' : 'text-red-400'}
+        `}
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <span>{r.userAnswer}</span>
+                        <span className="text-2xl">
+                          {r.isCorrect ? '✔️' : '❌'}
+                        </span>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -308,17 +336,17 @@ export default function ExamClient({ type, questions }) {
         </div>
 
         {/* Rules row */}
-      
-          <div className="mt-2 flex gap-4 text-sm font-bold">
-            <span className="text-yellow-300">
-              טעויות רגילות מותרות: {config.allowedWrong}
-            </span>
-         {(type === 'boat' || type === 'jetski') && (
+
+        <div className="mt-2 flex gap-4 text-sm font-bold">
+          <span className="text-yellow-300">
+            טעויות רגילות מותרות: {config.allowedWrong}
+          </span>
+          {(type === 'boat' || type === 'jetski') && (
             <span className="text-red-400">
               טעויות בשאלות חובה: {config.mandatoryAllowedWrong}
             </span>
-        )}
-          </div>
+          )}
+        </div>
       </div>
       {/* MAP */}
       <div className="bg-gray-800 p-4 rounded-xl h-fit  top-6">
