@@ -78,6 +78,11 @@ const EXAM_CONFIG = {
     mandatoryAllowedWrong: 0, // חובה – אפס טעויות
     title: 'מבחן כלי שיט',
   },
+   motorcycle: {
+    questionNumber: 30,
+    allowedWrong: 4,
+    title: 'מבחן אופנוע',
+  },
 };
 
 /* ---------------- Main Exam Client ---------------- */
