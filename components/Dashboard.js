@@ -1,6 +1,5 @@
 'use client';
 import Image from 'next/image';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -273,7 +272,7 @@ export default function HomePage() {
         </h2>
 
         {courseGroups.map((group) => (
-          <div key={group.title} className="mb-20">
+          <div key={group.title} className="mb-10">
             {/* Group title */}
             <h3 className="text-2xl font-bold mb-8 border-b border-gray-600 pb-2">
               {group.title}
@@ -314,9 +313,7 @@ export default function HomePage() {
           </div>
         ))}
       </section>
-
-      {/* Call to Action */}
-      <section className="py-20 text-center bg-linear-to-t from-gray-800 to-gray-900">
+      <section className="py-10 text-center bg-linear-to-t from-gray-800 to-gray-900">
         <h2 className="text-4xl font-bold mb-6">
           אל תחכה! אלפי תלמידים כבר עברו בהצלחה 🚦
         </h2>

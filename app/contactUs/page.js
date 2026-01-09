@@ -1,11 +1,15 @@
 "use client";
 
 import { Phone, MapPin, Clock } from "lucide-react";
+import { FaWhatsapp, FaInstagram } from "react-icons/fa";
+
+const WHATSAPP_URL = "https://wa.me/972549696666";
+const INSTAGRAM_URL = "https://www.instagram.com/teouria_hamodi";
+const PHONE_URL = "tel:+972549696666";
 
 export default function ContactPage() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-900 text-gray-100">
-      {/* Centered Content */}
       <main className="grow flex items-center justify-center">
         <section className="w-full max-w-md px-4 text-center">
           <h1 className="text-3xl font-bold mb-4">יצירת קשר</h1>
@@ -17,7 +21,7 @@ export default function ContactPage() {
           <div className="rounded-xl bg-gray-800 border border-gray-700 shadow p-5 space-y-4">
             {/* Phone */}
             <a
-              href="tel:054-969-6666"
+              href={PHONE_URL}
               className="flex items-center justify-center gap-3 text-2xl font-bold text-primary hover:opacity-80 transition"
               dir="ltr"
             >
@@ -36,6 +40,29 @@ export default function ContactPage() {
                 <Clock className="w-4 h-4 text-primary" />
                 ראשון–שישי | 08:00–20:00
               </div>
+            </div>
+
+            {/* Social Buttons */}
+            <div className="pt-4 flex justify-center gap-4">
+              <a
+                href={INSTAGRAM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+                className="bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 hover:opacity-90 text-white rounded-full p-3 shadow-lg flex items-center justify-center"
+              >
+                <FaInstagram size={20} />
+              </a>
+
+              <a
+                href={WHATSAPP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="WhatsApp"
+                className="bg-green-500 hover:bg-green-600 text-white rounded-full p-3 shadow-lg flex items-center justify-center"
+              >
+                <FaWhatsapp size={20} />
+              </a>
             </div>
           </div>
         </section>

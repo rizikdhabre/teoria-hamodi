@@ -3,8 +3,7 @@ import { useLanguage } from '@/app/context/LanguageContext';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
-import { FiSearch } from 'react-icons/fi';
-import WhatsAppButton from '../WhatsAppButton';
+
 
 export default function Header() {
   const { data: session, status } = useSession();

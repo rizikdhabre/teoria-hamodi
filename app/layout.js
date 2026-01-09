@@ -3,15 +3,18 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import ClientProviders from './Providers/ClientProviders';
 import { cookies } from 'next/headers';
-import WhatsAppButton from '@/components/WhatsAppButton';
+import ContactButtons from '@/components/ContactButtons';
+
 
 export const metadata = {
   title: 'Hamodi Theory | חמודי תיאוריה | حمودي تيؤريا',
   description:
-    'Hamodi Theory - Driving theory explanations and lessons. חמודי תיאוריה | حمودي تيؤريا',
+    'Hamodi Theory – Driving theory explanations and lessons. חמודי תיאוריה | حمودي تيؤريا',
   metadataBase: new URL('https://theory-hamodi.com'),
+  icons: {
+    icon: '/favicon.png',
+  },
 };
-
 
 export default async function RootLayout({ children }) {
   const cookieStore = await cookies();
@@ -26,11 +29,7 @@ export default async function RootLayout({ children }) {
   const [htmlLang, dir] = map[lang] || map.HE;
 
   return (
-    <html
-      lang={htmlLang}
-      dir={dir}
-      suppressHydrationWarning
-    >
+    <html lang={htmlLang} dir={dir} suppressHydrationWarning>
       <head>
         {/* 🔒 PRE-PAINT FLASH GUARD */}
         <script
@@ -53,18 +52,19 @@ export default async function RootLayout({ children }) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "Organization",
-              name: "Hamodi Theory",
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'Hamodi Theory',
+              logo: 'https://theory-hamodi.com/favicon.png',
               alternateName: [
-                "Hamodi Teuria",
-                "Hamodi Theory",
-                "חמודי תיאוריה",
-                "תיאוריה חמודי",
-                "حمودي تيؤريا",
-                "تيؤريا حمودي"
+                'Hamodi Teuria',
+                'Hamodi Theory',
+                'חמודי תיאוריה',
+                'תיאוריה חמודי',
+                'حمودي تيؤريا',
+                'تيؤريا حمودي',
               ],
-              url: "https://theory-hamodi.com"
+              url: 'https://theory-hamodi.com',
             }),
           }}
         />
@@ -74,7 +74,7 @@ export default async function RootLayout({ children }) {
         <ClientProviders lang={lang}>
           <Header />
           {children}
-               <WhatsAppButton />
+          <ContactButtons />
           <Footer />
         </ClientProviders>
       </body>
