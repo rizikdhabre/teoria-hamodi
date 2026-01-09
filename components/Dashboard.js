@@ -138,7 +138,7 @@ export default function HomePage() {
   ];
 
   return (
-    <main className="min-h-screen bg-gray-900 text-gray-100">
+    <main className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <section className="relative overflow-hidden py-14 text-center text-white h-[70vh] flex items-center justify-center">
         <div className="absolute inset-0">
           <motion.div
@@ -204,7 +204,7 @@ export default function HomePage() {
           </motion.h1>
 
           <motion.p
-            className="text-lg md:text-xl text-gray-100 mb-10"
+            className="text-lg md:text-xl text-gray-200 dark:text-gray-100 mb-10"
             initial={{ scale: 1.5, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.5, duration: 1 }}
@@ -248,7 +248,7 @@ export default function HomePage() {
       </section>
 
       {/* Advantages */}
-      <section className="py-16 px-6 bg-gray-800">
+      <section className="py-16 px-6 bg-gray-200 dark:bg-gray-800">
         <h2 className="text-3xl font-bold text-center mb-10">
           למה ללמוד אצלנו?
         </h2>
@@ -256,7 +256,7 @@ export default function HomePage() {
           {advantages.map((adv) => (
             <div
               key={adv.text}
-              className="bg-gray-700 p-6 rounded-lg shadow-md hover:shadow-xl transition"
+              className="bg-gray-300 dark:bg-gray-700 p-6 rounded-lg shadow-md hover:shadow-xl transition"
             >
               <div className="text-4xl mb-3">{adv.icon}</div>
               <p className="text-lg font-medium">{adv.text}</p>
@@ -274,7 +274,7 @@ export default function HomePage() {
         {courseGroups.map((group) => (
           <div key={group.title} className="mb-10">
             {/* Group title */}
-            <h3 className="text-2xl font-bold mb-8 border-b border-gray-600 pb-2">
+            <h3 className="text-2xl font-bold mb-8 border-b border-gray-300 dark:border-gray-600 pb-2">
               {group.title}
             </h3>
 
@@ -284,7 +284,7 @@ export default function HomePage() {
                 <div
                   key={course.id}
                   id={course.id}
-                  className="bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:scale-105 transition-transform scroll-mt-24"
+                  className="bg-gray-200 dark:bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:scale-105 transition-transform scroll-mt-24"
                 >
                   <div className="relative w-full h-80">
                     <Image
@@ -313,7 +313,12 @@ export default function HomePage() {
           </div>
         ))}
       </section>
-      <section className="py-10 text-center bg-linear-to-t from-gray-800 to-gray-900">
+      <section
+        className="py-10 text-center
+  bg-linear-to-t
+  from-gray-200 to-gray-300
+  dark:from-gray-800 dark:to-gray-900"
+      >
         <h2 className="text-4xl font-bold mb-6">
           אל תחכה! אלפי תלמידים כבר עברו בהצלחה 🚦
         </h2>

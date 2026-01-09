@@ -4,7 +4,7 @@ import Footer from '@/components/layout/Footer';
 import ClientProviders from './Providers/ClientProviders';
 import { cookies } from 'next/headers';
 import ContactButtons from '@/components/ContactButtons';
-
+import { ThemeProvider } from './context/ThemeContext';
 
 export const metadata = {
   title: 'Hamodi Theory | חמודי תיאוריה | حمودي تيؤريا',
@@ -49,6 +49,21 @@ export default async function RootLayout({ children }) {
         />
 
         <script
+          dangerouslySetInnerHTML={{
+            __html: `
+      (function () {
+        try {
+          var theme = localStorage.getItem('theme');
+          if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {}
+      })();
+    `,
+          }}
+        />
+
+        <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
@@ -70,13 +85,15 @@ export default async function RootLayout({ children }) {
         />
       </head>
 
-      <body>
-        <ClientProviders lang={lang}>
-          <Header />
-          {children}
-          <ContactButtons />
-          <Footer />
-        </ClientProviders>
+      <body className="bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300">
+        <ThemeProvider>
+          <ClientProviders lang={lang}>
+            <Header />
+            {children}
+            <ContactButtons />
+            <Footer />
+          </ClientProviders>
+        </ThemeProvider>
       </body>
     </html>
   );

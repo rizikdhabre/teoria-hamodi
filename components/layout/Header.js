@@ -3,9 +3,10 @@ import { useLanguage } from '@/app/context/LanguageContext';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
-
+import { useTheme } from '@/app/context/ThemeContext';
 
 export default function Header() {
+  const { theme, toggleTheme } = useTheme();
   const { data: session, status } = useSession();
   const { lang, changeLang } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -13,7 +14,6 @@ export default function Header() {
 
   const [open, setOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(0);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [showHeader, setShowHeader] = useState(true);
 
   const menuRef = useRef(null);
@@ -128,20 +128,12 @@ export default function Header() {
     });
   }
 
-  /* ---------------- Close search on Escape ---------------- */
-  useEffect(() => {
-    function onKeyDown(e) {
-      if (e.key === 'Escape') setSearchOpen(false);
-    }
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, []);
 
   return (
     <>
       {/* HEADER */}
       <header
-        className={`fixed top-0 left-0 w-full bg-gray-900/80 backdrop-blur-md text-gray-100 shadow-lg z-9999
+        className={`fixed top-0 left-0 w-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-md text-gray-900 dark:text-gray-100 shadow-lg z-9999
           transform transition-transform duration-300 ${
             showHeader ? 'translate-y-0' : '-translate-y-full'
           }`}
@@ -166,7 +158,7 @@ export default function Header() {
                     className="w-10 h-10 rounded-full object-cover ring-2 ring-white/30 hover:ring-white/60 transition"
                   />
                 </button>
-                <span className="font-semibold text-white">
+                <span className="font-semibold text-gray-900 dark:text-white">
                   ברוך הבא -חמודי תיאוריה
                 </span>
               </div>
@@ -203,7 +195,7 @@ export default function Header() {
           )}
 
           {/* Navigation */}
-          <nav className="hidden md:flex gap-8 font-medium text-white">
+          <nav className="hidden md:flex gap-8 font-medium text-gray-900 dark:text-white">
             <Link href="/about" className="hover:text-blue-400">
               אודות
             </Link>
@@ -217,6 +209,15 @@ export default function Header() {
               הרשמה/כניסה
             </Link>
           </nav>
+          <button
+            onClick={toggleTheme}
+            className="ml-3 w-10 h-10 rounded-full
+             bg-gray-200 dark:bg-gray-700
+             flex items-center justify-center
+             hover:scale-105 transition"
+          >
+            {theme === 'dark' ? '🌙' : '☀️'}
+          </button>
 
 
           <button
@@ -224,9 +225,11 @@ export default function Header() {
             className="md:hidden flex flex-col gap-1"
             aria-label="Open menu"
           >
-            <span className="w-6 h-0.5 bg-white"></span>
-            <span className="w-6 h-0.5 bg-white"></span>
-            <span className="w-6 h-0.5 bg-white"></span>
+            <span className="w-6 h-0.5 bg-gray-900 dark:bg-white"></span>
+
+            <span className="w-6 h-0.5 bg-gray-900 dark:bg-white"></span>
+
+            <span className="w-6 h-0.5 bg-gray-900 dark:bg-white"></span>
           </button>
 
           {/* Language Dropdown */}
@@ -236,9 +239,10 @@ export default function Header() {
               aria-haspopup="listbox"
               aria-expanded={open}
               onClick={toggleMenu}
-              className="w-10 h-10 rounded-full border border-gray-200
+              className="w-10 h-10 rounded-full border border-gray-300 dark:border-gray-200
                          text-xs shadow-lg font-semibold flex items-center
-                         justify-center hover:bg-gray-200 text-white"
+                         justify-center hover:bg-gray-200 dark:hover:bg-gray-700
+                         text-gray-900 dark:text-white"
             >
               {lang}
             </button>
@@ -248,9 +252,10 @@ export default function Header() {
                 data-no-translate
                 role="listbox"
                 className="absolute right-0 sm:left-1/2 sm:-translate-x-1/2 mt-2
-                           bg-gray-800/90 backdrop-blur-md border border-gray-700
+                           bg-white dark:bg-gray-800/90 backdrop-blur-md
+                           border border-gray-300 dark:border-gray-700
                            rounded-xl shadow-lg w-28 max-h-32 overflow-y-auto
-                           text-sm text-gray-200"
+                           text-sm text-gray-900 dark:text-gray-200"
               >
                 {options.map((opt, i) => (
                   <li key={opt.code}>
@@ -262,8 +267,8 @@ export default function Header() {
                         if (opt.code !== lang) changeLang(opt.code);
                         setOpen(false);
                       }}
-                      className={`w-full text-right px-3 py-2 hover:bg-gray-700
-                        ${focusedIndex === i ? 'bg-gray-700' : ''}`}
+                      className={`w-full text-right px-3 py-2 hover:bg-gray-200 dark:hover:bg-gray-700
+                       ${focusedIndex === i ? 'bg-gray-200 dark:bg-gray-700' : ''}`}
                     >
                       {opt.label}
                     </button>
@@ -275,7 +280,7 @@ export default function Header() {
         </div>
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
-          <nav className="md:hidden bg-gray-800 flex flex-col items-center gap-4 py-3 font-medium ">
+          <nav className="md:hidden bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 flex flex-col items-center gap-4 py-3 font-medium ">
             <Link href="/about" onClick={() => setMobileMenuOpen(false)}>
               אודות
             </Link>
@@ -291,7 +296,6 @@ export default function Header() {
           </nav>
         )}
       </header>
-
     </>
   );
 }

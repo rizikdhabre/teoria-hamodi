@@ -17,7 +17,7 @@ function Input({ label, type, name, rightIcon }) {
         name={name}
         className="
           w-full bg-transparent
-          border-b-2 border-white
+          border-b-2 border-gray-300 dark:border-white
           focus:border-[#e46033]
           outline-none
           px-1 pt-3 pb-1
@@ -29,7 +29,7 @@ function Input({ label, type, name, rightIcon }) {
       <label
         className="
           absolute left-0 top-1/2 -translate-y-1/2
-          text-white
+          text-gray-700 dark:text-white
           peer-focus:-top-1.25
           peer-valid:-top-1.25
           peer-focus:text-[#e46033]
@@ -41,7 +41,7 @@ function Input({ label, type, name, rightIcon }) {
       </label>
 
       {rightIcon && (
-        <div className="absolute right-0 top-1/2 -translate-y-1/2 text-blue-500 hover:text-blue-600 cursor-pointer">
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 text-blue-600 dark:text-blue-500 hover:text-blue-700 dark:hover:text-blue-600 cursor-pointer">
           {rightIcon}
         </div>
       )}
@@ -53,7 +53,7 @@ function Button({ text }) {
   return (
     <button
       type="submit"
-      className="relative w-full h-[45px] rounded-full border-2 border-[#e46033] font-semibold text-white overflow-hidden z-10 group"
+      className="relative w-full h-[45px] rounded-full border-2 border-[#e46033] font-semibold text-gray-900 dark:text-white overflow-hidden z-10 group"
     >
       <span className="absolute inset-0 -top-full bg-linear-to-b from-[#25252b] via-[#e46033] to-[#25252b] group-hover:top-0 transition-all duration-500"></span>
       <span className="relative z-10">{text}</span>
@@ -98,7 +98,7 @@ export default function LoginClient() {
     e.preventDefault();
     const formData = new FormData(e.target);
     const identifier1 = formData.get('username');
-    const  identifier= identifier1.toLowerCase()
+    const identifier = identifier1.toLowerCase();
     const password = formData.get('password');
     // i will use nextAuth login
     const res = await signIn('credentials', {
@@ -131,7 +131,7 @@ export default function LoginClient() {
   const currentColor = colors[colorIndex];
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-[#25252b] text-white">
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-[#25252b] text-gray-900 dark:text-white">
       <motion.div
         animate={{
           boxShadow: `0 0 25px ${currentColor}`,
@@ -196,7 +196,7 @@ export default function LoginClient() {
                   }
                 />
                 {loginError && (
-                  <p className="text-sm text-red-500 text-center">
+                  <p className="text-sm text-red-600 dark:text-red-500 text-center">
                     {loginError}
                   </p>
                 )}
@@ -246,8 +246,8 @@ export default function LoginClient() {
               </form>
 
               {fetchedPassword && (
-                <div className="mt-4 text-center bg-black/30 p-3 rounded">
-                  <p className="text-sm text-gray-300 mb-1">
+                <div className="mt-4 text-center bg-gray-200 dark:bg-black/30 p-3 rounded">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">
                     הסיסמה החדשה שלך:
                   </p>
                   <p className="text-lg font-mono text-[#e46033] select-all">

@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 
 function ExamQuestion({ question, type, selected, onSelect, number }) {
   return (
-    <div className="bg-gray-800 p-5 rounded-xl mb-4">
+    <div className="bg-gray-200 dark:bg-gray-800 p-5 rounded-xl mb-4">
       {question.hasImage && question.image && (
         <img
           src={`/question-images/${question.source}/${question.image}`}
@@ -28,7 +28,7 @@ function ExamQuestion({ question, type, selected, onSelect, number }) {
               ${
                 selected === key
                   ? 'border-blue-500 bg-blue-900/30'
-                  : 'border-gray-700 hover:bg-gray-700'
+                  : 'border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700'
               }
             `}
           >
@@ -143,6 +143,18 @@ export default function ExamClient({ type, questions }) {
     });
   }
 
+  function nextPage() {
+    if (currentPage < totalPages - 1) {
+      setCurrentPage((p) => p + 1);
+    }
+  }
+
+  function prevPage() {
+    if (currentPage > 0) {
+      setCurrentPage((p) => p - 1);
+    }
+  }
+
   /* ---------------- Submit Exam ---------------- */
 
   function submitExam() {
@@ -181,11 +193,11 @@ export default function ExamClient({ type, questions }) {
   /* ---------------- Results ---------------- */
 
   if (examFinished) {
-    const wrongCount = results.filter(r => !r.isCorrect).length;
+    const wrongCount = results.filter((r) => !r.isCorrect).length;
     return (
-      <div className="min-h-screen bg-gray-900 text-gray-100 p-6">
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-6 mt-10">
         <h2 className="text-2xl font-bold mb-6 text-center">
-         סיכום טעויות ({wrongCount})
+          סיכום טעויות ({wrongCount})
         </h2>
 
         {results.length === 0 ? (
@@ -194,14 +206,25 @@ export default function ExamClient({ type, questions }) {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full table-fixed border border-gray-700 text-sm">
-              <thead className="bg-gray-800">
+            <table className="w-full table-fixed border border-gray-300 dark:border-gray-700 text-sm">
+              <thead className="bg-gray-200 dark:bg-gray-800">
                 <tr>
-                  <th className="border border-gray-700 p-2 w-[40%]">שאלה</th>
-                  <th className="border border-gray-700 p-2 w-[32%]">
+                  <th
+                    className="border border-gray-300 dark:border-gray-700
+ p-2 w-[40%]"
+                  >
+                    שאלה
+                  </th>
+                  <th
+                    className="border border-gray-300 dark:border-gray-700
+ p-2 w-[32%]"
+                  >
                     התשובה הנכונה
                   </th>
-                  <th className="border border-gray-700 p-2 w-[28%]">
+                  <th
+                    className="border border-gray-300 dark:border-gray-700
+ p-2 w-[28%]"
+                  >
                     התשובה שלך
                   </th>
                 </tr>
@@ -211,7 +234,8 @@ export default function ExamClient({ type, questions }) {
                   <tr key={r.id} className="align-top text-right">
                     <td
                       className="
-                      border border-gray-700 p-4
+                      border border-gray-300 dark:border-gray-700
+ p-4
                       whitespace-normal break-words leading-relaxed
                       w-[45%]
                                   "
@@ -246,10 +270,12 @@ export default function ExamClient({ type, questions }) {
                     {/* CORRECT ANSWER (27.5%) */}
                     <td
                       className="
-          border border-gray-700 p-4
+          border border-gray-300 dark:border-gray-700
+ p-4
           whitespace-normal break-words leading-relaxed
           w-[27.5%]
-          text-green-400 font-bold
+          text-green-600 dark:text-green-400 font-bold
+
         "
                       dir="rtl"
                     >
@@ -259,11 +285,12 @@ export default function ExamClient({ type, questions }) {
                     {/* USER ANSWER (27.5%) */}
                     <td
                       className={`
-          border border-gray-700 p-4 font-bold
+          border border-gray-300 dark:border-gray-700
+ p-4 font-bold
           whitespace-normal break-words leading-relaxed
           w-[27.5%]
           text-center
-          ${r.isCorrect ? 'text-green-400' : 'text-red-400'}
+          ${r.isCorrect ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}
         `}
                     >
                       <div className="flex flex-col items-center gap-2">
@@ -318,7 +345,7 @@ export default function ExamClient({ type, questions }) {
   /* ---------------- Exam View ---------------- */
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 p-6">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-6 mt-10">
       {/* HEADER */}
       <div className="mb-6">
         {/* Top row */}
@@ -349,43 +376,50 @@ export default function ExamClient({ type, questions }) {
           )}
         </div>
       </div>
-      {/* MAP */}
-      <div className="bg-gray-800 p-4 rounded-xl h-fit  top-6">
-        <h3 className="font-bold mb-4 text-center">מפת המבחן</h3>
-
-        <div className="space-y-2">
-          {Array.from({ length: totalPages }).map((_, i) => {
-            const from = i * PAGE_SIZE + 1;
-            const to = Math.min((i + 1) * PAGE_SIZE, questions.length);
-
-            return (
-              <button
-                key={i}
-                onClick={() => setCurrentPage(i)}
-                className={`w-full py-2 rounded
-                    ${
-                      currentPage === i
-                        ? 'bg-blue-600'
-                        : 'bg-gray-700 hover:bg-gray-600'
-                    }
-                  `}
-              >
-                {from}–{to}
-              </button>
-            );
-          })}
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* MAP – top on mobile, right on desktop */}
+        <div
+          className="
+      bg-gray-200 dark:bg-gray-800
+      p-4 rounded-xl h-fit
+      order-1 lg:order-2
+      lg:sticky lg:top-6
+    "
+        >
+          <h3 className="font-bold mb-4 text-center">מפת המבחן</h3>
+
+          <div className="space-y-2">
+            {Array.from({ length: totalPages }).map((_, i) => {
+              const from = i * PAGE_SIZE + 1;
+              const to = Math.min((i + 1) * PAGE_SIZE, questions.length);
+
+              return (
+                <button
+                  key={i}
+                  onClick={() => setCurrentPage(i)}
+                  className={`w-full py-2 rounded
+              ${
+                currentPage === i
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600'
+              }
+            `}
+                >
+                  {from}–{to}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* QUESTIONS */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 order-2 lg:order-1">
           {visibleQuestions.map((q, i) => {
             const globalIndex = start + i;
 
             return (
               <ExamQuestion
-                start={start}
                 key={q.id}
                 question={q}
                 type={type}
@@ -395,6 +429,25 @@ export default function ExamClient({ type, questions }) {
               />
             );
           })}
+
+          {/* NAV BUTTONS */}
+          <div className="flex justify-between mt-6">
+            <button
+              onClick={prevPage}
+              disabled={currentPage === 0}
+              className="px-6 py-2 rounded bg-gray-300 dark:bg-gray-700 disabled:opacity-40"
+            >
+              → אחורה
+            </button>
+
+            <button
+              onClick={nextPage}
+              disabled={currentPage === totalPages - 1}
+              className="px-6 py-2 rounded bg-blue-600 disabled:opacity-40"
+            >
+              הבא ←
+            </button>
+          </div>
         </div>
       </div>
     </div>

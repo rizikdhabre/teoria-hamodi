@@ -9,8 +9,7 @@ function QuestionCard({ question, type, answerState, onSelect, onReveal }) {
   const { selected, showResult, revealCorrect } = answerState;
 
   return (
-    <div className="bg-gray-800 p-5 rounded-xl mb-3">
-      {/* IMAGE */}
+    <div className="bg-gray-200 dark:bg-gray-800 p-5 rounded-xl mb-3">
       {question.hasImage && question.image && (
         <img
           src={`/question-images/${type}/${question.image}`}
@@ -19,15 +18,13 @@ function QuestionCard({ question, type, answerState, onSelect, onReveal }) {
         />
       )}
 
-      {/* QUESTION TEXT (CLICKABLE → REVEAL) */}
       <p
         onClick={onReveal}
-        className="font-semibold mb-4 cursor-pointer hover:text-blue-400"
+        className="font-semibold mb-4 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
       >
         {question.id}. {question.question}
       </p>
 
-      {/* OPTIONS */}
       <div className="space-y-2">
         {Object.entries(question.options).map(([key, opt], index) => {
           const isCorrect = opt.isTrue;
@@ -43,14 +40,13 @@ function QuestionCard({ question, type, answerState, onSelect, onReveal }) {
             <div key={key}>
               <div
                 onClick={() => onSelect(key)}
-                className={`
-                  border rounded px-4 py-2 cursor-pointer
+                className={`border rounded px-4 py-2 cursor-pointer
                   ${
                     showCorrect
                       ? 'border-green-500 bg-green-900/30'
                       : showWrong
-                        ? 'border-red-500 bg-red-900/30'
-                        : 'border-gray-700 hover:bg-gray-700'
+                      ? 'border-red-500 bg-red-900/30'
+                      : 'border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700'
                   }
                 `}
               >
@@ -58,11 +54,12 @@ function QuestionCard({ question, type, answerState, onSelect, onReveal }) {
                 {opt.text}
               </div>
 
-              {/* FEEDBACK */}
               {showResult && isSelected && (
                 <p
                   className={`mt-1 text-sm ${
-                    isCorrect ? 'text-green-400' : 'text-red-400'
+                    isCorrect
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400'
                   }`}
                 >
                   {isCorrect ? 'إجابة صحيحة' : 'إجابة خاطئة'}
@@ -111,14 +108,14 @@ export default function QuestionsClient({
 
   const [isPending, startTransition] = useTransition();
 
-  /* ---------- Build Map ---------- */
-
   const ranges = useMemo(
     () => buildDbRanges(totalCount, rangeSize),
     [totalCount, rangeSize]
   );
 
-  /* ---------- Load Range ---------- */
+  const currentIndex = ranges.findIndex(
+    (r) => r.from === activeRange.from && r.to === activeRange.to
+  );
 
   function selectRange(range) {
     setActiveRange(range);
@@ -136,16 +133,22 @@ export default function QuestionsClient({
     });
   }
 
-  /* ---------- Answer Handlers ---------- */
+  function goNext() {
+    if (currentIndex < ranges.length - 1) {
+      selectRange(ranges[currentIndex + 1]);
+    }
+  }
+
+  function goBack() {
+    if (currentIndex > 0) {
+      selectRange(ranges[currentIndex - 1]);
+    }
+  }
 
   function handleAnswer(index, key) {
     setAnswers((prev) => {
       const copy = [...prev];
-      copy[index] = {
-        selected: key,
-        showResult: true,
-        revealCorrect: false,
-      };
+      copy[index] = { selected: key, showResult: true, revealCorrect: false };
       return copy;
     });
   }
@@ -153,39 +156,29 @@ export default function QuestionsClient({
   function revealOnly(index) {
     setAnswers((prev) => {
       const copy = [...prev];
-      copy[index] = {
-        ...copy[index],
-        revealCorrect: true,
-      };
+      copy[index] = { ...copy[index], revealCorrect: true };
       return copy;
     });
   }
 
-  /* ---------- UI ---------- */
-
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 p-6 mt-10">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-6 mt-10">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* MAP */}
-        <div className="lg:block mt-4">
-          {/* MOBILE TOGGLE BUTTON */}
+        <div>
           <div className="lg:hidden mb-2">
             <button
               onClick={() => setMapOpen((v) => !v)}
-              className="w-full bg-gray-800 py-2 rounded-xl flex items-center justify-center gap-2"
+              className="w-full bg-gray-200 dark:bg-gray-800 py-2 rounded-xl"
             >
-              <span className="text-xl">☰</span>
-              <span>מפת שאלות</span>
+              ☰ מפת שאלות
             </button>
           </div>
 
-          {/* MAP PANEL */}
           <div
-            className={`
-      bg-gray-800 p-4 rounded-xl h-fit
-      ${mapOpen ? 'block' : 'hidden'}
-      lg:block lg:sticky lg:top-6
-    `}
+            className={`bg-gray-200 dark:bg-gray-800 p-4 rounded-xl ${
+              mapOpen ? 'block' : 'hidden'
+            } lg:block lg:sticky lg:top-6`}
           >
             <h3 className="font-bold mb-4 text-center">מפת שאלות</h3>
 
@@ -199,13 +192,16 @@ export default function QuestionsClient({
                     key={`${r.from}-${r.to}`}
                     onClick={() => {
                       selectRange(r);
-                      setMapOpen(false); // 👈 auto close on mobile
+                      setMapOpen(false);
                     }}
                     className={`py-1 rounded ${
-                      active ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'
+                      active
+                        ? 'bg-blue-600'
+                        : 'bg-gray-300 dark:bg-gray-700 hover:bg-gray-400'
                     }`}
                   >
-                    {`${String(r.from).padStart(3, '0')}–${String(r.to).padStart(3, '0')}`}
+                    {String(r.from).padStart(3, '0')}–
+                    {String(r.to).padStart(3, '0')}
                   </button>
                 );
               })}
@@ -226,7 +222,26 @@ export default function QuestionsClient({
             />
           ))}
 
-          {isPending && <p className="text-center opacity-50">Loading…</p>}
+          {/* NAV BUTTONS */}
+          <div className="flex justify-between mt-6">
+            <button
+              onClick={goBack}
+              disabled={currentIndex === 0}
+              className="px-6 py-2 rounded bg-gray-300 dark:bg-gray-700 disabled:opacity-40"
+            >
+             → אחורה
+            </button>
+
+            <button
+              onClick={goNext}
+              disabled={currentIndex === ranges.length - 1}
+              className="px-6 py-2 rounded bg-blue-600 disabled:opacity-40"
+            >
+             הבא ← 
+            </button>
+          </div>
+
+          {isPending && <p className="text-center opacity-50 mt-2">Loading…</p>}
         </div>
       </div>
     </div>
