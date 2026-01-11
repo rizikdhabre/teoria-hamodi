@@ -7,9 +7,10 @@ const ALGO = 'aes-256-gcm';
 const SECRET = process.env.PASSWORD_SECRET;
 
 function generatePassword() {
-  const digits = ['1','2','3','4','5'];
-  return Array.from({ length: 5 }, () =>
-    digits[Math.floor(Math.random() * digits.length)]
+  const digits = ['1', '2', '3', '4', '5'];
+  return Array.from(
+    { length: 5 },
+    () => digits[Math.floor(Math.random() * digits.length)]
   ).join('');
 }
 
@@ -48,7 +49,7 @@ export async function POST(req) {
       return NextResponse.json({ error: 'חסרים שדות' }, { status: 400 });
     }
 
-    if (username !== 'admin') {
+    if (!['admin', 'coursePassword'].includes(username)) {
       return NextResponse.json({ error: 'שם משתמש לא חוקי' }, { status: 401 });
     }
 
@@ -75,7 +76,7 @@ export async function POST(req) {
     const newPassword = generatePassword();
 
     await users.updateOne(
-      { username: 'admin' },
+      { username: username },
       {
         $set: {
           passwordHash: await bcrypt.hash(newPassword, 10),

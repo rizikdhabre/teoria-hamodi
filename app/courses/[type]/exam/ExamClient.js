@@ -439,14 +439,21 @@ export default function ExamClient({ type, questions }) {
             >
               → אחורה
             </button>
-
-            <button
-              onClick={nextPage}
-              disabled={currentPage === totalPages - 1}
-              className="px-6 py-2 rounded bg-blue-600 disabled:opacity-40"
-            >
-              הבא ←
-            </button>
+            {currentPage === totalPages - 1 ? (
+              <button
+                onClick={submitExam}
+                className="px-6 py-2 rounded bg-green-600 text-white"
+              >
+                הגש
+              </button>
+            ) : (
+              <button
+                onClick={nextPage}
+                className="px-6 py-2 rounded bg-blue-600"
+              >
+                הבא ←
+              </button>
+            )}
           </div>
         </div>
       </div>

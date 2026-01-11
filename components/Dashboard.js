@@ -5,22 +5,85 @@ import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-
+import axios from 'axios';
 export default function HomePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [current, setCurrent] = useState(0);
   const [prev, setPrev] = useState(null);
   const [dir, setDir] = useState('ltr');
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [pendingLink, setPendingLink] = useState(null);
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+  const [recoveryPin, setRecoveryPin] = useState('');
+  const [recoveryError, setRecoveryError] = useState('');
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [recoveredPassword, setRecoveredPassword] = useState('');
   const totalImages = 3;
   const fadeDuration = 1.2;
   const intervalMs = 7000;
+  const restrictedCourses = ['jetski', 'boat'];
 
-  const handleCourses = (link) => {
-    if (status === 'authenticated') {
-      router.push(link);
-    } else {
+  const handleCourses = (course) => {
+    if (status !== 'authenticated') {
       router.push('/login');
+      return;
+    }
+    if (restrictedCourses.includes(course.id)) {
+      setShowPasswordModal(true);
+      setPendingLink(course.link);
+      return;
+    }
+
+    router.push(course.link);
+  };
+
+  const handleFetchNewPassword = async () => {
+    if (!recoveryPin) {
+      setRecoveryError('יש להזין  PIN');
+      return;
+    }
+
+    try {
+      if (recoveredPassword) return;
+      setRecoveryLoading(true);
+      setRecoveryError('');
+      setRecoveredPassword('');
+
+      const res = await axios.post('/api/admin/fetchPassword', {
+        username: 'coursePassword',
+        pin: recoveryPin,
+      });
+
+      setRecoveredPassword(res.data.password);
+    } catch (err) {
+      const msg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        'שגיאת שרת, נסה שוב';
+      setRecoveryError(msg);
+    } finally {
+      setRecoveryLoading(false);
+    }
+  };
+
+  const handlePasswordSubmit = async () => {
+    try {
+      const res = await axios.post('/api/coursePassword', { password });
+      if (res.data.success) {
+        setShowPasswordModal(false);
+        setPassword('');
+        setError('');
+        if (pendingLink) {
+          router.push(pendingLink);
+          setPendingLink(null);
+        }
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'שגיאה בשרת, נסה שוב מאוחר יותר');
+      console.log(err.response?.data?.message);
     }
   };
 
@@ -301,7 +364,7 @@ export default function HomePage() {
                     </h4>
 
                     <button
-                      onClick={() => handleCourses(course.link)}
+                      onClick={() => handleCourses(course)}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md"
                     >
                       התחל עכשיו
@@ -323,6 +386,182 @@ export default function HomePage() {
           אל תחכה! אלפי תלמידים כבר עברו בהצלחה 🚦
         </h2>
       </section>
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-80">
+            <h3 className="text-xl font-bold text-center mb-4">
+              הזן סיסמה לקורס
+            </h3>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handlePasswordSubmit();
+              }}
+            >
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="סיסמה"
+                className="w-full px-3 py-2 border rounded mb-3 text-black"
+                autoFocus
+              />
+
+              {error && (
+                <p className="text-red-500 text-sm mb-3 text-center">{error}</p>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded"
+                >
+                  אישור
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPasswordModal(false);
+                    setPassword('');
+                    setError('');
+                  }}
+                  className="flex-1 bg-red-400 py-2 rounded"
+                >
+                  ביטול
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowRecoveryModal(true)}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded"
+                >
+                  שחזר
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showRecoveryModal && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center"
+          onClick={() => {
+            // ⬅️ click outside closes modal
+            setShowRecoveryModal(false);
+            setRecoveryPin('');
+            setRecoveryError('');
+            setRecoveredPassword('');
+          }}
+        >
+          <div
+            className="relative bg-white dark:bg-gray-800 rounded-lg p-6 w-80 shadow-xl"
+            onClick={(e) => e.stopPropagation()} // ⛔ prevent close when clicking inside
+          >
+            {/* ❌ Close button */}
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => {
+                setShowRecoveryModal(false);
+                setRecoveryPin('');
+                setRecoveryError('');
+                setRecoveredPassword('');
+              }}
+              className="
+          absolute top-3 end-3
+          text-gray-500 hover:text-gray-800
+          dark:text-gray-400 dark:hover:text-white
+          transition-colors
+          text-xl font-bold
+        "
+            >
+              ✕
+            </button>
+
+            <h3 className="text-xl font-bold text-center mb-4 text-black dark:text-white">
+              שחזור סיסמה (מנהל)
+            </h3>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleFetchNewPassword();
+              }}
+            >
+              {/* PIN input */}
+              <input
+                type="password"
+                onChange={(e) => setRecoveryPin(e.target.value)}
+                placeholder="PIN"
+                className="
+            w-full px-3 py-2 mb-3 rounded
+            bg-white dark:bg-gray-700
+            text-black dark:text-white
+            border border-gray-300 dark:border-gray-600
+            placeholder:text-gray-400 dark:placeholder:text-gray-400
+            placeholder:opacity-80
+            focus:outline-none focus:ring-2 focus:ring-blue-500
+            transition-colors
+          "
+              />
+
+              {recoveryError && (
+                <p className="text-red-500 text-sm mb-3 text-center">
+                  {recoveryError}
+                </p>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={recoveryLoading}
+                  className="
+              flex-1 bg-blue-600 hover:bg-blue-700
+              disabled:opacity-50
+              text-white py-2 rounded
+              transition-colors
+            "
+                >
+                  {recoveryLoading ? 'מאמת…' : 'אישור'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRecoveryModal(false);
+                    setRecoveryPin('');
+                    setRecoveryError('');
+                    setRecoveredPassword('');
+                  }}
+                  className="
+              flex-1 bg-red-400 hover:bg-red-500
+              text-white py-2 rounded
+              transition-colors
+            "
+                >
+                  ביטול
+                </button>
+              </div>
+              {recoveredPassword && (
+                <div
+                  className="
+              mt-4 p-3 rounded
+              bg-green-100 dark:bg-green-900/30
+              border border-green-300 dark:border-green-700
+              text-green-800 dark:text-green-300
+              text-center font-mono text-lg
+            "
+                >
+                  הסיסמה: <span className="font-bold">{recoveredPassword}</span>
+                </div>
+              )}
+            </form>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
