@@ -133,6 +133,13 @@ export default function ExamClient({ type, questions }) {
   const end = start + PAGE_SIZE;
   const visibleQuestions = questions.slice(start, end);
 
+  useEffect(() => {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth',
+  });
+}, [currentPage]);
+
   /* ---------------- Answer Handler ---------------- */
 
   function handleSelect(globalIndex, key) {

@@ -68,6 +68,7 @@ export default function LoginClient() {
   const [loginError, setLoginError] = useState('');
   const router = useRouter();
   const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/';
 
   const handleFetchPassword = async (e) => {
     e.preventDefault();
@@ -105,13 +106,14 @@ export default function LoginClient() {
       identifier,
       password,
       redirect: false,
+      callbackUrl,
     });
 
     if (res.error) {
       setLoginError(res.error);
       return;
     }
-    router.push('/');
+    router.push(res.url || callbackUrl);
   };
 
   // 🔹 STATE DERIVED FROM URL

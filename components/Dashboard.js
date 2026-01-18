@@ -28,7 +28,7 @@ export default function HomePage() {
 
   const handleCourses = (course) => {
     if (status !== 'authenticated') {
-      router.push('/login');
+      router.push(`/login?callbackUrl=${encodeURIComponent(course.link)}`);
       return;
     }
     if (restrictedCourses.includes(course.id)) {
@@ -376,16 +376,16 @@ export default function HomePage() {
           </div>
         ))}
       </section>
-      <section
-        className="py-10 text-center
-  bg-linear-to-t
-  from-gray-200 to-gray-300
-  dark:from-gray-800 dark:to-gray-900"
-      >
-        <h2 className="text-4xl font-bold mb-6">
-          אל תחכה! אלפי תלמידים כבר עברו בהצלחה 🚦
-        </h2>
-      </section>
+      <div className="flex justify-center">
+        <Image
+          src="/images/teoria-hamodi-logo.jpeg"
+          alt="תיאוריה חמודי"
+          width={450}
+          height={450}
+          className="rounded-2xl shadow-2xl border dark:border-zinc-800"
+          priority
+        />
+      </div>
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-80">

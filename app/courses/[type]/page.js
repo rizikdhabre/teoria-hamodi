@@ -1,9 +1,24 @@
 import Link from 'next/link';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 export default async function CoursePage({ params }) {
   const { type } = params;
-
+  const session = await getServerSession(authOptions);
+  if(!session) {
+    redirect('/login?callbackUrl=' + encodeURIComponent(`/courses/${type}`));
+  }
   const isSeaCourse = type === 'boat' || type === 'jetski';
+
+if(isSeaCourse) {
+    const cookieStore = cookies();
+    const hasAccess = cookieStore.get('sea_course_access');
+    if (!hasAccess) {
+      redirect('/');
+    }
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">

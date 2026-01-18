@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useTransition } from 'react';
+import { useState, useMemo, useTransition,useEffect } from 'react';
 import { fetchQuestionsByRange } from '../actions';
 
 /* ---------------- Question Card ---------------- */
@@ -105,6 +105,10 @@ export default function QuestionsClient({
     from: 1,
     to: rangeSize,
   });
+
+  useEffect(() => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}, [activeRange]);
 
   const [isPending, startTransition] = useTransition();
 
