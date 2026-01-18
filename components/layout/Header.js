@@ -41,15 +41,11 @@ export default function Header() {
 
   /* ---------------- Scroll hide/show header ---------------- */
   useEffect(() => {
-    let lastY = window.scrollY;
-
     function handleScroll() {
-      const currentY = window.scrollY;
-      setShowHeader(currentY <= lastY);
-      lastY = currentY;
+      setShowHeader(window.scrollY === 0);
     }
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -127,7 +123,6 @@ export default function Header() {
       return willOpen;
     });
   }
-
 
   return (
     <>
@@ -218,7 +213,6 @@ export default function Header() {
           >
             {theme === 'dark' ? '🌙' : '☀️'}
           </button>
-
 
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
