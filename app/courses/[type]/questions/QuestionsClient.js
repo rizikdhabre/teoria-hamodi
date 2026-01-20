@@ -7,7 +7,7 @@ import { fetchQuestionsByRange } from '../actions';
 
 function QuestionCard({ question, type, answerState, onSelect, onReveal }) {
   const { selected, showResult, revealCorrect } = answerState;
-
+  console.log("Hello")
   return (
     <div className="bg-gray-200 dark:bg-gray-800 p-5 rounded-xl mb-3">
       {question.hasImage && question.image && (

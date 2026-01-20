@@ -19,7 +19,7 @@ export default async function ExamPage({ params }) {
 
   let questions = [];
 
-  // 🚗 MIXED MODE (not boat & not jetski)
+ 
   if (type !== 'boat' && type !== 'jetski') {
     const carCollection = await getCollection('carquestions');
 
