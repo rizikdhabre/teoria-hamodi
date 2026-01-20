@@ -1,12 +1,31 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useLanguage } from '@/app/context/LanguageContext';
+
+/* ---------------- Helpers ---------------- */
+
+function resolveQuestion(q, lang) {
+  const t = q.translations?.[lang.toLowerCase()] || q.translations?.he;
+
+  return {
+    id: q.id,
+    source: q.source,
+    hasImage: q.hasImage,
+    image: q.image,
+    question: t.question,
+    options: t.options,
+  };
+}
 
 /* ---------------- Exam Question Card ---------------- */
 
-function ExamQuestion({ question, type, selected, onSelect, number }) {
+function ExamQuestion({ question, selected, onSelect, number }) {
   return (
-    <div className="bg-gray-200 dark:bg-gray-800 p-5 rounded-xl mb-4">
+    <div
+      data-no-translate
+      className="bg-gray-200 dark:bg-gray-800 p-5 rounded-xl mb-4"
+    >
       {question.hasImage && question.image && (
         <img
           src={`/question-images/${question.source}/${question.image}`}
@@ -29,8 +48,7 @@ function ExamQuestion({ question, type, selected, onSelect, number }) {
                 selected === key
                   ? 'border-blue-500 bg-blue-900/30'
                   : 'border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700'
-              }
-            `}
+              }`}
           >
             <span className="font-bold mr-2">({index + 1})</span>
             {opt.text}
@@ -40,69 +58,42 @@ function ExamQuestion({ question, type, selected, onSelect, number }) {
     </div>
   );
 }
-const EXAM_CONFIG = {
-  car: {
-    questionNumber: 30,
-    allowedWrong: 4,
-    time: 40 * 60,
-    title: 'מבחן רכב פרטי',
-  },
-  cTruck: {
-    questionNumber: 30,
-    allowedWrong: 4,
-    title: 'מבחן משאית קלה',
-  },
-  truck: {
-    questionNumber: 30,
-    allowedWrong: 4,
-    title: 'מבחן משאית',
-  },
-  bus: {
-    questionNumber: 30,
-    allowedWrong: 4,
-    title: 'מבחן אוטובוס',
-  },
-  tractor: {
-    questionNumber: 30,
-    allowedWrong: 4,
-    title: 'מבחן טרקטור',
-  },
-  jetski: {
-    allowedWrong: 4, // רגילות
-    mandatoryAllowedWrong: 0, // חובה – אפס טעויות
-    title: 'מבחן אופנוע ים',
-  },
 
-  boat: {
-    allowedWrong: 9, // רגילות
-    mandatoryAllowedWrong: 0, // חובה – אפס טעויות
-    title: 'מבחן כלי שיט',
-  },
-  motorcycle: {
-    questionNumber: 30,
-    allowedWrong: 4,
-    title: 'מבחן אופנוע',
-  },
+/* ---------------- Config ---------------- */
+
+const EXAM_CONFIG = {
+  car: { allowedWrong: 4, time: 40 * 60 },
+  cTruck: { allowedWrong: 4, time: 40 * 60 },
+  truck: { allowedWrong: 4, time: 40 * 60 },
+  bus: { allowedWrong: 4, time: 40 * 60 },
+  tractor: { allowedWrong: 4, time: 40 * 60 },
+  motorcycle: { allowedWrong: 4, time: 40 * 60 },
+  jetski: { allowedWrong: 4, mandatoryAllowedWrong: 0, time: 60 * 60 },
+  boat: { allowedWrong: 9, mandatoryAllowedWrong: 0, time: 60 * 60 },
 };
 
 /* ---------------- Main Exam Client ---------------- */
 
 export default function ExamClient({ type, questions }) {
-  const [previewImage, setPreviewImage] = useState(null);
-  const config = EXAM_CONFIG[type];
-  let EXAM_TIME = 40 * 60;
-  if (type === 'boat' || type === 'jetski') {
-    EXAM_TIME = 60 * 60;
-  }
-  const PAGE_SIZE = 10;
+  const { lang } = useLanguage();
 
-  const totalPages = Math.ceil(questions.length / PAGE_SIZE);
+  /* 🔒 Freeze questions ONCE */
+  const [examQuestions] = useState(() => questions);
+
+  const PAGE_SIZE = 10;
+  const config = EXAM_CONFIG[type];
+  const EXAM_TIME = config?.time ?? 40 * 60;
+
+  const totalPages = Math.ceil(examQuestions.length / PAGE_SIZE);
 
   const [currentPage, setCurrentPage] = useState(0);
-  const [answers, setAnswers] = useState(questions.map(() => null));
+  const [answers, setAnswers] = useState(() =>
+    examQuestions.map(() => null)
+  );
   const [timeLeft, setTimeLeft] = useState(EXAM_TIME);
   const [examFinished, setExamFinished] = useState(false);
   const [results, setResults] = useState([]);
+  const [previewImage, setPreviewImage] = useState(null);
 
   /* ---------------- Timer ---------------- */
 
@@ -131,14 +122,11 @@ export default function ExamClient({ type, questions }) {
 
   const start = currentPage * PAGE_SIZE;
   const end = start + PAGE_SIZE;
-  const visibleQuestions = questions.slice(start, end);
+  const visibleRaw = examQuestions.slice(start, end);
 
   useEffect(() => {
-  window.scrollTo({
-    top: 0,
-    behavior: 'smooth',
-  });
-}, [currentPage]);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage]);
 
   /* ---------------- Answer Handler ---------------- */
 
@@ -165,183 +153,116 @@ export default function ExamClient({ type, questions }) {
   /* ---------------- Submit Exam ---------------- */
 
   function submitExam() {
-    const results = [];
+    const res = examQuestions.map((q, i) => {
+      const t =
+        q.translations?.[lang.toLowerCase()] ||
+        q.translations?.he;
 
-    questions.forEach((q, i) => {
-      const userKey = answers[i];
-
-      const correctEntry = Object.entries(q.options).find(
+      const correctEntry = Object.entries(t.options).find(
         ([, opt]) => opt.isTrue
       );
 
-      const correctKey = correctEntry?.[0] ?? null;
-      const correctText = correctEntry?.[1]?.text ?? '';
-
-      const userText = userKey ? q.options[userKey]?.text : '';
-
-      const isCorrect = userKey === correctKey;
-
-      results.push({
+      return {
         number: i + 1,
         id: q.id,
-        question: q.question,
-        image: q.hasImage ? q.image : null,
         source: q.source,
-        correctAnswer: correctText,
-        userAnswer: userText,
-        isCorrect, // ✅ KEY FIELD
-      });
+        image: q.hasImage ? q.image : null,
+        correctKey: correctEntry?.[0] ?? null,
+        userKey: answers[i],
+      };
     });
 
-    setResults(results);
+    setResults(res);
     setExamFinished(true);
   }
 
   /* ---------------- Results ---------------- */
 
   if (examFinished) {
-    const wrongCount = results.filter((r) => !r.isCorrect).length;
+    const wrongCount = results.filter(
+      (r) => r.userKey !== r.correctKey
+    ).length;
+
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-6 mt-10">
         <h2 className="text-2xl font-bold mb-6 text-center">
           סיכום טעויות ({wrongCount})
         </h2>
 
-        {results.length === 0 ? (
-          <p className="text-center text-green-400 text-xl">
-            🎉 אין טעויות! מבחן מושלם
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full table-fixed border border-gray-300 dark:border-gray-700 text-sm">
-              <thead className="bg-gray-200 dark:bg-gray-800">
-                <tr>
-                  <th
-                    className="border border-gray-300 dark:border-gray-700
- p-2 w-[40%]"
-                  >
-                    שאלה
-                  </th>
-                  <th
-                    className="border border-gray-300 dark:border-gray-700
- p-2 w-[32%]"
-                  >
-                    התשובה הנכונה
-                  </th>
-                  <th
-                    className="border border-gray-300 dark:border-gray-700
- p-2 w-[28%]"
-                  >
-                    התשובה שלך
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.map((r) => (
-                  <tr key={r.id} className="align-top text-right">
-                    <td
-                      className="
-                      border border-gray-300 dark:border-gray-700
- p-4
-                      whitespace-normal break-words leading-relaxed
-                      w-[45%]
-                                  "
-                      dir="rtl"
-                    >
-                      <div className="mb-3">
-                        <span className="font-bold ml-1">{r.number}.</span>
-                        {r.question}
-                      </div>
+        <div data-no-translate className="overflow-x-auto">
+          <table className="w-full table-fixed border border-gray-300 dark:border-gray-700 text-sm">
+            <thead className="bg-gray-200 dark:bg-gray-800">
+              <tr>
+                <th className="p-2 w-[40%]">שאלה</th>
+                <th className="p-2 w-[32%]">התשובה הנכונה</th>
+                <th className="p-2 w-[28%]">התשובה שלך</th>
+              </tr>
+            </thead>
+            <tbody>
+              {results.map((r) => {
+                const q = examQuestions.find(
+                  (x) => x.id === r.id
+                );
+                const t =
+                  q.translations?.[lang.toLowerCase()] ||
+                  q.translations?.he;
 
+                const correctText = r.correctKey
+                  ? t.options[r.correctKey]?.text
+                  : '';
+
+                const userText = r.userKey
+                  ? t.options[r.userKey]?.text
+                  : '';
+
+                const isCorrect =
+                  r.userKey === r.correctKey;
+
+                return (
+                  <tr key={r.id} className="align-top text-right">
+                    <td className="p-4">
+                      <b>{r.number}.</b> {t.question}
                       {r.image && (
                         <img
                           src={`/question-images/${r.source}/${r.image}`}
-                          alt=""
+                          className="mt-2 max-h-[180px] cursor-pointer rounded"
                           onClick={() =>
                             setPreviewImage(
                               `/question-images/${r.source}/${r.image}`
                             )
                           }
-                          className="
-              mx-auto
-              max-h-[180px]
-              w-auto
-              object-contain
-              cursor-pointer
-              rounded
-            "
                         />
                       )}
                     </td>
 
-                    {/* CORRECT ANSWER (27.5%) */}
-                    <td
-                      className="
-          border border-gray-300 dark:border-gray-700
- p-4
-          whitespace-normal break-words leading-relaxed
-          w-[27.5%]
-          text-green-600 dark:text-green-400 font-bold
-
-        "
-                      dir="rtl"
-                    >
-                      {r.correctAnswer}
+                    <td className="p-4 text-green-600 font-bold">
+                      {correctText}
                     </td>
 
-                    {/* USER ANSWER (27.5%) */}
                     <td
-                      className={`
-          border border-gray-300 dark:border-gray-700
- p-4 font-bold
-          whitespace-normal break-words leading-relaxed
-          w-[27.5%]
-          text-center
-          ${r.isCorrect ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}
-        `}
+                      className={`p-4 font-bold ${
+                        isCorrect
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                      }`}
                     >
-                      <div className="flex flex-col items-center gap-2">
-                        <span>{r.userAnswer}</span>
-                        <span className="text-2xl">
-                          {r.isCorrect ? '✔️' : '❌'}
-                        </span>
-                      </div>
+                      {userText}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
         {previewImage && (
           <div
-            className="
-      fixed inset-0 z-50 bg-black/90
-      flex items-center justify-center
-    "
+            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
             onClick={() => setPreviewImage(null)}
           >
-            {/* Close Button */}
-            <button
-              className="
-        absolute top-4 right-4
-        text-white text-3xl
-        font-bold
-      "
-              onClick={() => setPreviewImage(null)}
-            >
-              ✕
-            </button>
-
-            {/* Image */}
             <img
               src={previewImage}
-              alt=""
-              className="
-        max-w-full max-h-full
-        object-contain
-      "
-              onClick={(e) => e.stopPropagation()}
+              className="max-w-full max-h-full object-contain"
             />
           </div>
         )}
@@ -353,24 +274,23 @@ export default function ExamClient({ type, questions }) {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-6 mt-10">
-      {/* HEADER */}
       <div className="mb-6">
-        {/* Top row */}
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-bold">
-            מבחן – שאלות {start + 1}–{Math.min(end, questions.length)}
+            מבחן – שאלות {start + 1}–{Math.min(end, examQuestions.length)}
           </h2>
 
           <div className="text-red-400 font-mono text-lg">
             ⏱ {formatTime(timeLeft)}
           </div>
 
-          <button onClick={submitExam} className="p-2 bg-green-600 rounded">
+          <button
+            onClick={submitExam}
+            className="p-2 bg-green-600 rounded"
+          >
             הגש
           </button>
         </div>
-
-        {/* Rules row */}
 
         <div className="mt-2 flex gap-4 text-sm font-bold">
           <span className="text-yellow-300">
@@ -385,33 +305,25 @@ export default function ExamClient({ type, questions }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* MAP – top on mobile, right on desktop */}
-        <div
-          className="
-      bg-gray-200 dark:bg-gray-800
-      p-4 rounded-xl h-fit
-      order-1 lg:order-2
-      lg:sticky lg:top-6
-    "
-        >
+        <div className="bg-gray-200 dark:bg-gray-800 p-4 rounded-xl h-fit lg:sticky lg:top-6">
           <h3 className="font-bold mb-4 text-center">מפת המבחן</h3>
-
-          <div className="space-y-2">
+          <div className="space-y-2" data-no-translate>
             {Array.from({ length: totalPages }).map((_, i) => {
               const from = i * PAGE_SIZE + 1;
-              const to = Math.min((i + 1) * PAGE_SIZE, questions.length);
+              const to = Math.min(
+                (i + 1) * PAGE_SIZE,
+                examQuestions.length
+              );
 
               return (
                 <button
                   key={i}
                   onClick={() => setCurrentPage(i)}
-                  className={`w-full py-2 rounded
-              ${
-                currentPage === i
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600'
-              }
-            `}
+                  className={`w-full py-2 rounded ${
+                    currentPage === i
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600'
+                  }`}
                 >
                   {from}–{to}
                 </button>
@@ -420,24 +332,24 @@ export default function ExamClient({ type, questions }) {
           </div>
         </div>
 
-        {/* QUESTIONS */}
-        <div className="lg:col-span-3 order-2 lg:order-1">
-          {visibleQuestions.map((q, i) => {
+        <div className="lg:col-span-3">
+          {visibleRaw.map((q, i) => {
+            const localized = resolveQuestion(q, lang);
             const globalIndex = start + i;
 
             return (
               <ExamQuestion
                 key={q.id}
-                question={q}
-                type={type}
+                question={localized}
                 selected={answers[globalIndex]}
-                onSelect={(key) => handleSelect(globalIndex, key)}
+                onSelect={(key) =>
+                  handleSelect(globalIndex, key)
+                }
                 number={globalIndex + 1}
               />
             );
           })}
 
-          {/* NAV BUTTONS */}
           <div className="flex justify-between mt-6">
             <button
               onClick={prevPage}
@@ -446,6 +358,7 @@ export default function ExamClient({ type, questions }) {
             >
               → אחורה
             </button>
+
             {currentPage === totalPages - 1 ? (
               <button
                 onClick={submitExam}

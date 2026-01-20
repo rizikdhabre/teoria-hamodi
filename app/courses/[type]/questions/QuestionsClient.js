@@ -2,14 +2,32 @@
 
 import { useState, useMemo, useTransition,useEffect } from 'react';
 import { fetchQuestionsByRange } from '../actions';
+import { useLanguage } from '@/app/context/LanguageContext';
 
 /* ---------------- Question Card ---------------- */
 
 function QuestionCard({ question, type, answerState, onSelect, onReveal }) {
+  const {lang}=useLanguage()
   const { selected, showResult, revealCorrect } = answerState;
-  console.log("Hello")
+  const RESULT_LABELS = {
+  AR: {
+    correct: 'إجابة صحيحة',
+    wrong: 'إجابة خاطئة',
+  },
+  HE: {
+    correct: 'תשובה נכונה',
+    wrong: 'תשובה שגויה',
+  },
+  EN: {
+    correct: 'Correct answer',
+    wrong: 'Wrong answer',
+  },
+};
+const labels = RESULT_LABELS[lang] || RESULT_LABELS.HE;
   return (
-    <div className="bg-gray-200 dark:bg-gray-800 p-5 rounded-xl mb-3">
+    <div
+    data-no-translate
+     className="bg-gray-200 dark:bg-gray-800 p-5 rounded-xl mb-3">
       {question.hasImage && question.image && (
         <img
           src={`/question-images/${type}/${question.image}`}
@@ -62,7 +80,7 @@ function QuestionCard({ question, type, answerState, onSelect, onReveal }) {
                       : 'text-red-600 dark:text-red-400'
                   }`}
                 >
-                  {isCorrect ? 'إجابة صحيحة' : 'إجابة خاطئة'}
+                  {isCorrect ? labels.correct : labels.wrong}
                 </p>
               )}
             </div>
@@ -91,6 +109,7 @@ export default function QuestionsClient({
   totalCount,
   rangeSize = 10,
 }) {
+  const {lang}=useLanguage()
   const [mapOpen, setMapOpen] = useState(false);
   const [questions, setQuestions] = useState(initialQuestions);
   const [answers, setAnswers] = useState(
@@ -165,6 +184,21 @@ export default function QuestionsClient({
     });
   }
 
+  const localizedQuestions = useMemo(() => {
+  return questions.map((q) => {
+    const t = q.translations?.[lang.toLowerCase()] 
+           || q.translations?.he; 
+
+    return {
+      id: q.id,
+      hasImage: q.hasImage,
+      image: q.image,
+      question: t.question,
+      options: t.options,
+    };
+  });
+}, [questions, lang]);
+
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-6 mt-10">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -186,7 +220,7 @@ export default function QuestionsClient({
           >
             <h3 className="font-bold mb-4 text-center">מפת שאלות</h3>
 
-            <div className="grid grid-cols-3 gap-2 text-sm">
+            <div className="grid grid-cols-3 gap-2 text-sm" data-no-translate>
               {ranges.map((r) => {
                 const active =
                   r.from === activeRange.from && r.to === activeRange.to;
@@ -215,7 +249,7 @@ export default function QuestionsClient({
 
         {/* QUESTIONS */}
         <div className="lg:col-span-3">
-          {questions.map((q, i) => (
+          {localizedQuestions.map((q, i) => (
             <QuestionCard
               key={q.id}
               question={q}
