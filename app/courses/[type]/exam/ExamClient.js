@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/app/context/LanguageContext';
+import { useQuestionSpeech, buildSpeechText } from '@/lib/useQuestionSpeech';
 
 /* ---------------- Helpers ---------------- */
 
@@ -20,7 +21,9 @@ function resolveQuestion(q, lang) {
 
 /* ---------------- Exam Question Card ---------------- */
 
-function ExamQuestion({ question, selected, onSelect, number }) {
+function ExamQuestion({ question, selected, onSelect, number, lang }) {
+  const { speak, stop, speaking } = useQuestionSpeech(lang);
+
   return (
     <div
       data-no-translate
@@ -34,9 +37,24 @@ function ExamQuestion({ question, selected, onSelect, number }) {
         />
       )}
 
-      <p className="font-semibold mb-4">
-        {number}. {question.question}
-      </p>
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <p className="font-semibold">
+          {number}. {question.question}
+        </p>
+
+        <button
+          type="button"
+          onClick={() => speaking ? stop() : speak(buildSpeechText(question.question, question.options))}
+          aria-label="Read question aloud"
+          className="shrink-0 w-10 h-10 rounded-full border border-gray-300 dark:border-gray-600
+                     flex items-center justify-center
+                     bg-white dark:bg-gray-900
+                     hover:bg-blue-50 dark:hover:bg-gray-700
+                     transition-colors"
+        >
+          {speaking ? '⏹️' : '🔊'}
+        </button>
+      </div>
 
       <div className="space-y-2">
         {Object.entries(question.options).map(([key, opt], index) => (
@@ -346,6 +364,7 @@ export default function ExamClient({ type, questions }) {
                   handleSelect(globalIndex, key)
                 }
                 number={globalIndex + 1}
+                lang={lang}
               />
             );
           })}

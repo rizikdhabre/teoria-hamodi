@@ -18,28 +18,21 @@ export const authOptions = {
           throw new Error('נא למלא את כל השדות');
         }
 
-        // 🔒 admin only
-        if (credentials.identifier !== 'admin') {
-          throw new Error('שם משתמש שגוי');
-        }
 
         const users = await getCollection('users');
-        const admin = await users.findOne({ username: 'admin' });
+        const admin = await users.findOne({ username: credentials.identifier });
 
         if (!admin || !admin.passwordHash || !admin.passwordExpiresAt) {
           throw new Error('משתמש אדמין לא קיים');
         }
 
-        // ✅ 1) Check expiration FIRST (ignore the submitted password if expired)
         const now = new Date();
         const expiresAt = new Date(admin.passwordExpiresAt);
 
         if (now > expiresAt) {
-          // ❌ deny login (password was rotated)
           throw new Error('הסיסמה פגה תוקף. קח סיסמה חדשה מהמנהל');
         }
 
-        // ✅ 2) Only if NOT expired → verify password
         const isValid = await bcrypt.compare(
           credentials.password,
           admin.passwordHash

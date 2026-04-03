@@ -3,11 +3,13 @@
 import { useState, useMemo, useTransition,useEffect } from 'react';
 import { fetchQuestionsByRange } from '../actions';
 import { useLanguage } from '@/app/context/LanguageContext';
+import { useQuestionSpeech, buildSpeechText } from '@/lib/useQuestionSpeech';
 
 /* ---------------- Question Card ---------------- */
 
 function QuestionCard({ question, type, answerState, onSelect, onReveal }) {
   const {lang}=useLanguage()
+  const { speak, stop, speaking } = useQuestionSpeech(lang);
   const { selected, showResult, revealCorrect } = answerState;
   const RESULT_LABELS = {
   AR: {
@@ -36,12 +38,27 @@ const labels = RESULT_LABELS[lang] || RESULT_LABELS.HE;
         />
       )}
 
-      <p
-        onClick={onReveal}
-        className="font-semibold mb-4 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
-      >
-        {question.id}. {question.question}
-      </p>
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <p
+          onClick={onReveal}
+          className="font-semibold cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+        >
+          {question.id}. {question.question}
+        </p>
+
+        <button
+          type="button"
+          onClick={() => speaking ? stop() : speak(buildSpeechText(question.question, question.options))}
+          aria-label="Read question aloud"
+          className="shrink-0 w-10 h-10 rounded-full border border-gray-300 dark:border-gray-600
+                     flex items-center justify-center
+                     bg-white dark:bg-gray-900
+                     hover:bg-blue-50 dark:hover:bg-gray-700
+                     transition-colors"
+        >
+          {speaking ? '⏹️' : '🔊'}
+        </button>
+      </div>
 
       <div className="space-y-2">
         {Object.entries(question.options).map(([key, opt], index) => {

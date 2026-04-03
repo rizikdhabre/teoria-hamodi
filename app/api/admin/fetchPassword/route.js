@@ -49,7 +49,7 @@ export async function POST(req) {
       return NextResponse.json({ error: 'חסרים שדות' }, { status: 400 });
     }
 
-    if (!['admin', 'coursePassword'].includes(username)) {
+    if (!['1802', 'coursePassword'].includes(username)) {
       return NextResponse.json({ error: 'שם משתמש לא חוקי' }, { status: 401 });
     }
 

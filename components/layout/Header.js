@@ -182,7 +182,6 @@ export default function Header() {
       "
                   >
                     <span>יציאה</span>
-                    <span>🚪</span>
                   </button>
                 </div>
               )}
