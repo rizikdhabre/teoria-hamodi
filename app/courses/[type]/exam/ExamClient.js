@@ -42,7 +42,7 @@ function ExamQuestion({ question, selected, onSelect, number, lang }) {
           {number}. {question.question}
         </p>
 
-        <button
+        {/* <button
           type="button"
           onClick={() => isSpeaking('q') ? stop() : speak(question.question, 'q')}
           aria-label="Read question aloud"
@@ -53,7 +53,7 @@ function ExamQuestion({ question, selected, onSelect, number, lang }) {
                      transition-colors"
         >
           {isSpeaking('q') ? '⏹️' : '🔊'}
-        </button>
+        </button> */}
       </div>
 
       <div className="space-y-2">
@@ -68,7 +68,7 @@ function ExamQuestion({ question, selected, onSelect, number, lang }) {
                   : 'border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
           >
-            <button
+            {/* <button
               type="button"
               onClick={(e) => { e.stopPropagation(); isSpeaking(key) ? stop() : speak(opt.text, key); }}
               aria-label="Read answer aloud"
@@ -78,7 +78,7 @@ function ExamQuestion({ question, selected, onSelect, number, lang }) {
                          transition-colors text-sm"
             >
               {isSpeaking(key) ? '⏹️' : '🔊'}
-            </button>
+            </button> */}
             <span className="font-bold mr-2">({index + 1})</span>
             {opt.text}
           </div>

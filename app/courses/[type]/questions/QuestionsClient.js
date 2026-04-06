@@ -46,7 +46,7 @@ const labels = RESULT_LABELS[lang] || RESULT_LABELS.HE;
           {question.id}. {question.question}
         </p>
 
-        <button
+        {/* <button
           type="button"
           onClick={() => isSpeaking('q') ? stop() : speak(question.question, 'q')}
           aria-label="Read question aloud"
@@ -57,7 +57,7 @@ const labels = RESULT_LABELS[lang] || RESULT_LABELS.HE;
                      transition-colors"
         >
           {isSpeaking('q') ? '⏹️' : '🔊'}
-        </button>
+        </button> */}
       </div>
 
       <div className="space-y-2">
@@ -85,7 +85,7 @@ const labels = RESULT_LABELS[lang] || RESULT_LABELS.HE;
                   }
                 `}
               >
-                <button
+                {/* <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); isSpeaking(key) ? stop() : speak(opt.text, key); }}
                   aria-label="Read answer aloud"
@@ -95,7 +95,7 @@ const labels = RESULT_LABELS[lang] || RESULT_LABELS.HE;
                              transition-colors text-sm"
                 >
                   {isSpeaking(key) ? '⏹️' : '🔊'}
-                </button>
+                </button> */}
                 <span className="font-bold mr-2">({index + 1})</span>
                 {opt.text}
               </div>
