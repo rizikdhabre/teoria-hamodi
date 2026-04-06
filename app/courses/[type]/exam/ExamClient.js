@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useLanguage } from '@/app/context/LanguageContext';
-import { useQuestionSpeech, buildSpeechText } from '@/lib/useQuestionSpeech';
+import { useQuestionSpeech } from '@/lib/useQuestionSpeech';
 
 /* ---------------- Helpers ---------------- */
 
@@ -22,7 +22,7 @@ function resolveQuestion(q, lang) {
 /* ---------------- Exam Question Card ---------------- */
 
 function ExamQuestion({ question, selected, onSelect, number, lang }) {
-  const { speak, stop, speaking } = useQuestionSpeech(lang);
+  const { speak, stop, isSpeaking } = useQuestionSpeech(lang);
 
   return (
     <div
@@ -44,7 +44,7 @@ function ExamQuestion({ question, selected, onSelect, number, lang }) {
 
         <button
           type="button"
-          onClick={() => speaking ? stop() : speak(buildSpeechText(question.question, question.options))}
+          onClick={() => isSpeaking('q') ? stop() : speak(question.question, 'q')}
           aria-label="Read question aloud"
           className="shrink-0 w-10 h-10 rounded-full border border-gray-300 dark:border-gray-600
                      flex items-center justify-center
@@ -52,7 +52,7 @@ function ExamQuestion({ question, selected, onSelect, number, lang }) {
                      hover:bg-blue-50 dark:hover:bg-gray-700
                      transition-colors"
         >
-          {speaking ? '⏹️' : '🔊'}
+          {isSpeaking('q') ? '⏹️' : '🔊'}
         </button>
       </div>
 
@@ -61,13 +61,24 @@ function ExamQuestion({ question, selected, onSelect, number, lang }) {
           <div
             key={key}
             onClick={() => onSelect(key)}
-            className={`border rounded px-4 py-2 cursor-pointer
+            className={`border rounded px-4 py-2 cursor-pointer flex items-center gap-2
               ${
                 selected === key
                   ? 'border-blue-500 bg-blue-900/30'
                   : 'border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
           >
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); isSpeaking(key) ? stop() : speak(opt.text, key); }}
+              aria-label="Read answer aloud"
+              className="shrink-0 w-7 h-7 rounded-full
+                         flex items-center justify-center
+                         hover:bg-gray-300 dark:hover:bg-gray-600
+                         transition-colors text-sm"
+            >
+              {isSpeaking(key) ? '⏹️' : '🔊'}
+            </button>
             <span className="font-bold mr-2">({index + 1})</span>
             {opt.text}
           </div>
