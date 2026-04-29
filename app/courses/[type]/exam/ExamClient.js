@@ -46,7 +46,8 @@ function AudioButton({ isActive, onClick, className = '' }) {
 }
 
 function ExamQuestion({ question, selected, onSelect, number, lang }) {
-  const { speak, stop, isSpeaking, statusMessage } = useQuestionSpeech(lang);
+  const { speak, stop, isSpeaking, statusMessage, isSpeechSupported } =
+    useQuestionSpeech(lang);
   const audioPayload = buildAudioPayload(question);
 
   return (
@@ -67,20 +68,22 @@ function ExamQuestion({ question, selected, onSelect, number, lang }) {
           {number}. {question.question}
         </p>
 
-        <AudioButton
-          isActive={isSpeaking('q')}
-          onClick={() => {
-            isSpeaking('q')
-              ? stop()
-              : speak({
-                  ...audioPayload,
-                  type: 'question',
-                  id: 'q',
-                  includeOptions: true,
-                });
-          }}
-          className="shrink-0"
-        />
+        {isSpeechSupported && (
+          <AudioButton
+            isActive={isSpeaking('q')}
+            onClick={() => {
+              isSpeaking('q')
+                ? stop()
+                : speak({
+                    ...audioPayload,
+                    type: 'question',
+                    id: 'q',
+                    includeOptions: true,
+                  });
+            }}
+            className="shrink-0"
+          />
+        )}
       </div>
 
       {statusMessage && (
@@ -105,23 +108,25 @@ function ExamQuestion({ question, selected, onSelect, number, lang }) {
               }
             `}
           >
-            <AudioButton
-              isActive={isSpeaking(key)}
-              onClick={(event) => {
-                event.stopPropagation();
+            {isSpeechSupported && (
+              <AudioButton
+                isActive={isSpeaking(key)}
+                onClick={(event) => {
+                  event.stopPropagation();
 
-                isSpeaking(key)
-                  ? stop()
-                  : speak({
-                      ...audioPayload,
-                      type: 'option',
-                      optionKey: key,
-                      id: key,
-                      includeOptions: true,
-                    });
-              }}
-              className="shrink-0 text-sm"
-            />
+                  isSpeaking(key)
+                    ? stop()
+                    : speak({
+                        ...audioPayload,
+                        type: 'option',
+                        optionKey: key,
+                        id: key,
+                        includeOptions: true,
+                      });
+                }}
+                className="shrink-0 text-sm"
+              />
+            )}
             <span className="font-bold mr-2">({index + 1})</span>
             {option.text}
           </div>
@@ -132,7 +137,8 @@ function ExamQuestion({ question, selected, onSelect, number, lang }) {
 }
 
 function ExamResultRow({ result, question, lang, onPreview }) {
-  const { speak, stop, isSpeaking, statusMessage } = useQuestionSpeech(lang);
+  const { speak, stop, isSpeaking, statusMessage, isSpeechSupported } =
+    useQuestionSpeech(lang);
   const localizedQuestion = resolveQuestion(question, lang);
   const audioPayload = buildAudioPayload(localizedQuestion);
   const correctText = result.correctKey
@@ -151,20 +157,22 @@ function ExamResultRow({ result, question, lang, onPreview }) {
             <b>{result.number}.</b> {localizedQuestion.question}
           </p>
 
-          <AudioButton
-            isActive={isSpeaking('question')}
-            onClick={() => {
-              isSpeaking('question')
-                ? stop()
-                : speak({
-                    ...audioPayload,
-                    type: 'question',
-                    id: 'question',
-                    includeOptions: true,
-                  });
-            }}
-            className="shrink-0"
-          />
+          {isSpeechSupported && (
+            <AudioButton
+              isActive={isSpeaking('question')}
+              onClick={() => {
+                isSpeaking('question')
+                  ? stop()
+                  : speak({
+                      ...audioPayload,
+                      type: 'question',
+                      id: 'question',
+                      includeOptions: true,
+                    });
+              }}
+              className="shrink-0"
+            />
+          )}
         </div>
 
         {statusMessage && (
@@ -192,7 +200,7 @@ function ExamResultRow({ result, question, lang, onPreview }) {
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <span className="w-full">{correctText}</span>
 
-          {result.correctKey && (
+          {isSpeechSupported && result.correctKey && (
             <AudioButton
               isActive={isSpeaking('correct')}
               onClick={() => {
@@ -220,7 +228,7 @@ function ExamResultRow({ result, question, lang, onPreview }) {
         <div className="flex items-start justify-between gap-3">
           <span>{userText}</span>
 
-          {result.userKey && userText && (
+          {isSpeechSupported && result.userKey && userText && (
             <AudioButton
               isActive={isSpeaking('user')}
               onClick={() => {
@@ -256,7 +264,7 @@ const EXAM_CONFIG = {
 
 export default function ExamClient({ type, questions }) {
   const { lang } = useLanguage();
-  const { preload } = useQuestionSpeech(lang);
+  const { preload, isSpeechSupported } = useQuestionSpeech(lang);
   const [examQuestions] = useState(() => questions);
 
   const PAGE_SIZE = 10;
@@ -297,12 +305,16 @@ export default function ExamClient({ type, questions }) {
   }, [currentPage]);
 
   useEffect(() => {
+    if (!isSpeechSupported) {
+      return;
+    }
+
     const preloadItems = visibleQuestions.map((question) =>
       buildAudioPayload(question)
     );
 
     preload(preloadItems);
-  }, [preload, visibleQuestions]);
+  }, [isSpeechSupported, preload, visibleQuestions]);
 
   function handleSelect(globalIndex, key) {
     setAnswers((prev) => {

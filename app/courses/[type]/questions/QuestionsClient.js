@@ -9,7 +9,8 @@ import { useQuestionSpeech } from '@/lib/useQuestionSpeech';
 
 function QuestionCard({ question, type, answerState, onSelect, onReveal }) {
   const { lang } = useLanguage();
-  const { speak, stop, isSpeaking, statusMessage } = useQuestionSpeech(lang);
+  const { speak, stop, isSpeaking, statusMessage, isSpeechSupported } =
+    useQuestionSpeech(lang);
   const { selected, showResult, revealCorrect } = answerState;
   const RESULT_LABELS = {
     AR: {
@@ -47,21 +48,23 @@ function QuestionCard({ question, type, answerState, onSelect, onReveal }) {
           {question.id}. {question.question}
         </p>
 
-        <button
-          type="button"
-          onClick={() => {
-            isSpeaking('q')
-              ? stop()
-              : speak({
-                  collectionName: `${type}questions`,
-                  docId: question.docId,
-                  type: 'question',
-                  id: 'q',
-                });
-          }}
-        >
-          {isSpeaking('q') ? '⏹️' : '🔊'}
-        </button>
+        {isSpeechSupported && (
+          <button
+            type="button"
+            onClick={() => {
+              isSpeaking('q')
+                ? stop()
+                : speak({
+                    collectionName: `${type}questions`,
+                    docId: question.docId,
+                    type: 'question',
+                    id: 'q',
+                  });
+            }}
+          >
+            {isSpeaking('q') ? '⏹️' : '🔊'}
+          </button>
+        )}
       </div>
 
       {statusMessage && (
@@ -98,24 +101,26 @@ function QuestionCard({ question, type, answerState, onSelect, onReveal }) {
                   }
                 `}
               >
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
+                {isSpeechSupported && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
 
-                    isSpeaking(key)
-                      ? stop()
-                      : speak({
-                          collectionName: `${type}questions`,
-                          docId: question.docId,
-                          type: 'option',
-                          optionKey: key,
-                          id: key,
-                        });
-                  }}
-                >
-                  {isSpeaking(key) ? '⏹️' : '🔊'}
-                </button>
+                      isSpeaking(key)
+                        ? stop()
+                        : speak({
+                            collectionName: `${type}questions`,
+                            docId: question.docId,
+                            type: 'option',
+                            optionKey: key,
+                            id: key,
+                          });
+                    }}
+                  >
+                    {isSpeaking(key) ? '⏹️' : '🔊'}
+                  </button>
+                )}
                 <span className="font-bold mr-2">({index + 1})</span>
                 {opt.text}
               </div>
@@ -158,7 +163,7 @@ export default function QuestionsClient({
   rangeSize = 10,
 }) {
   const { lang } = useLanguage();
-  const { preload } = useQuestionSpeech(lang);
+  const { preload, isSpeechSupported } = useQuestionSpeech(lang);
   const [mapOpen, setMapOpen] = useState(false);
   const [questions, setQuestions] = useState(initialQuestions);
   const [isLoadingRange, setIsLoadingRange] = useState(false);
@@ -277,6 +282,10 @@ export default function QuestionsClient({
   }, [questions, lang]);
 
   useEffect(() => {
+    if (!isSpeechSupported) {
+      return;
+    }
+
     const preloadItems = localizedQuestions.map((question) => ({
       collectionName: `${type}questions`,
       docId: question.docId,
@@ -286,7 +295,7 @@ export default function QuestionsClient({
     }));
 
     preload(preloadItems);
-  }, [localizedQuestions, preload, type]);
+  }, [isSpeechSupported, localizedQuestions, preload, type]);
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-6 mt-10">
