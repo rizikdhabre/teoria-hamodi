@@ -11,8 +11,7 @@ function buildCollectionName(source) {
 function resolveQuestion(question, lang) {
   const translation =
     question.translations?.[lang.toLowerCase()] || question.translations?.he;
-  const resolvedAudio =
-    question.audio?.[lang.toLowerCase()] || question.audio?.he || null;
+  const resolvedAudio = question.audio?.[lang.toLowerCase()] || null;
 
   return {
     docId: question.docId,

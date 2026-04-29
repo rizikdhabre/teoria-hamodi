@@ -261,7 +261,7 @@ export default function QuestionsClient({
   const localizedQuestions = useMemo(() => {
     return questions.map((q) => {
       const t = q.translations?.[lang.toLowerCase()] || q.translations?.he;
-      const resolvedAudio = q.audio?.[lang.toLowerCase()] || q.audio?.he || null;
+      const resolvedAudio = q.audio?.[lang.toLowerCase()] || null;
 
       return {
         docId: q.docId,
