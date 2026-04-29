@@ -1,6 +1,18 @@
 import { getCollection } from '@/lib/db';
 import ExamClient from './ExamClient';
 
+function serializeExamQuestion(question, source) {
+  return {
+    docId: question._id.toString(),
+    id: question.id,
+    source,
+    hasImage: question.hasImage,
+    image: question.image,
+    audio: question.audio || null,
+    translations: question.translations,
+  };
+}
+
 export default async function ExamPage({ params }) {
   const { type } = params;
 
@@ -12,6 +24,7 @@ export default async function ExamPage({ params }) {
   function getRandomIds(max, count) {
     const set = new Set();
     while (set.size < count) {
+      // eslint-disable-next-line react-hooks/purity
       set.add(Math.floor(Math.random() * max) + 1);
     }
     return [...set];
@@ -31,15 +44,15 @@ export default async function ExamPage({ params }) {
 
     const carQuestions = (
       await carCollection
-        .find({ id: { $in: carIds } }, { projection: { _id: 0 } })
+        .find({ id: { $in: carIds } })
         .toArray()
-    ).map((q) => ({ ...q, source: 'car' }));
+    ).map((q) => serializeExamQuestion(q, 'car'));
 
     const mainQuestions = (
       await mainCollection
-        .find({ id: { $in: mainIds } }, { projection: { _id: 0 } })
+        .find({ id: { $in: mainIds } })
         .toArray()
-    ).map((q) => ({ ...q, source: type }));
+    ).map((q) => serializeExamQuestion(q, type));
 
     questions = [...carQuestions, ...mainQuestions];
   }
@@ -50,12 +63,9 @@ export default async function ExamPage({ params }) {
 
     questions = (
       await mainCollection
-        .find({ id: { $in: ids } }, { projection: { _id: 0 } })
+        .find({ id: { $in: ids } })
         .toArray()
-    ).map((q) => ({
-      ...q,
-      source: type, 
-    }));
+    ).map((q) => serializeExamQuestion(q, type));
   }
 
   return (

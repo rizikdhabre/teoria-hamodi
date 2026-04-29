@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useTransition,useEffect } from 'react';
+import { useState, useMemo, useTransition, useEffect, useRef } from 'react';
 import { fetchQuestionsByRange } from '../actions';
 import { useLanguage } from '@/app/context/LanguageContext';
 import { useQuestionSpeech } from '@/lib/useQuestionSpeech';
@@ -8,28 +8,29 @@ import { useQuestionSpeech } from '@/lib/useQuestionSpeech';
 /* ---------------- Question Card ---------------- */
 
 function QuestionCard({ question, type, answerState, onSelect, onReveal }) {
-  const {lang}=useLanguage()
-  const { speak, stop, isSpeaking } = useQuestionSpeech(lang);
+  const { lang } = useLanguage();
+  const { speak, stop, isSpeaking, statusMessage } = useQuestionSpeech(lang);
   const { selected, showResult, revealCorrect } = answerState;
   const RESULT_LABELS = {
-  AR: {
-    correct: 'إجابة صحيحة',
-    wrong: 'إجابة خاطئة',
-  },
-  HE: {
-    correct: 'תשובה נכונה',
-    wrong: 'תשובה שגויה',
-  },
-  EN: {
-    correct: 'Correct answer',
-    wrong: 'Wrong answer',
-  },
-};
-const labels = RESULT_LABELS[lang] || RESULT_LABELS.HE;
+    AR: {
+      correct: 'إجابة صحيحة',
+      wrong: 'إجابة خاطئة',
+    },
+    HE: {
+      correct: 'תשובה נכונה',
+      wrong: 'תשובה שגויה',
+    },
+    EN: {
+      correct: 'Correct answer',
+      wrong: 'Wrong answer',
+    },
+  };
+  const labels = RESULT_LABELS[lang] || RESULT_LABELS.HE;
   return (
     <div
-    data-no-translate
-     className="bg-gray-200 dark:bg-gray-800 p-5 rounded-xl mb-3">
+      data-no-translate
+      className="bg-gray-200 dark:bg-gray-800 p-5 rounded-xl mb-3"
+    >
       {question.hasImage && question.image && (
         <img
           src={`/question-images/${type}/${question.image}`}
@@ -46,19 +47,31 @@ const labels = RESULT_LABELS[lang] || RESULT_LABELS.HE;
           {question.id}. {question.question}
         </p>
 
-        {/* <button
+        <button
           type="button"
-          onClick={() => isSpeaking('q') ? stop() : speak(question.question, 'q')}
-          aria-label="Read question aloud"
-          className="shrink-0 w-10 h-10 rounded-full border border-gray-300 dark:border-gray-600
-                     flex items-center justify-center
-                     bg-white dark:bg-gray-900
-                     hover:bg-blue-50 dark:hover:bg-gray-700
-                     transition-colors"
+          onClick={() => {
+            isSpeaking('q')
+              ? stop()
+              : speak({
+                  collectionName: `${type}questions`,
+                  docId: question.docId,
+                  type: 'question',
+                  id: 'q',
+                });
+          }}
         >
           {isSpeaking('q') ? '⏹️' : '🔊'}
-        </button> */}
+        </button>
       </div>
+
+      {statusMessage && (
+        <p
+          className="mb-3 text-sm text-amber-700 dark:text-amber-300"
+          aria-live="polite"
+        >
+          {statusMessage}
+        </p>
+      )}
 
       <div className="space-y-2">
         {Object.entries(question.options).map(([key, opt], index) => {
@@ -80,22 +93,29 @@ const labels = RESULT_LABELS[lang] || RESULT_LABELS.HE;
                     showCorrect
                       ? 'border-green-500 bg-green-900/30'
                       : showWrong
-                      ? 'border-red-500 bg-red-900/30'
-                      : 'border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        ? 'border-red-500 bg-red-900/30'
+                        : 'border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700'
                   }
                 `}
               >
-                {/* <button
+                <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); isSpeaking(key) ? stop() : speak(opt.text, key); }}
-                  aria-label="Read answer aloud"
-                  className="shrink-0 w-7 h-7 rounded-full
-                             flex items-center justify-center
-                             hover:bg-gray-300 dark:hover:bg-gray-600
-                             transition-colors text-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+
+                    isSpeaking(key)
+                      ? stop()
+                      : speak({
+                          collectionName: `${type}questions`,
+                          docId: question.docId,
+                          type: 'option',
+                          optionKey: key,
+                          id: key,
+                        });
+                  }}
                 >
                   {isSpeaking(key) ? '⏹️' : '🔊'}
-                </button> */}
+                </button>
                 <span className="font-bold mr-2">({index + 1})</span>
                 {opt.text}
               </div>
@@ -137,9 +157,12 @@ export default function QuestionsClient({
   totalCount,
   rangeSize = 10,
 }) {
-  const {lang}=useLanguage()
+  const { lang } = useLanguage();
+  const { preload } = useQuestionSpeech(lang);
   const [mapOpen, setMapOpen] = useState(false);
   const [questions, setQuestions] = useState(initialQuestions);
+  const [isLoadingRange, setIsLoadingRange] = useState(false);
+  const latestRangeRequestId = useRef(0);
   const [answers, setAnswers] = useState(
     initialQuestions.map(() => ({
       selected: null,
@@ -154,8 +177,8 @@ export default function QuestionsClient({
   });
 
   useEffect(() => {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}, [activeRange]);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [activeRange]);
 
   const [isPending, startTransition] = useTransition();
 
@@ -168,20 +191,43 @@ export default function QuestionsClient({
     (r) => r.from === activeRange.from && r.to === activeRange.to
   );
 
-  function selectRange(range) {
-    setActiveRange(range);
+  async function selectRange(range) {
+    const isSameRange =
+      range.from === activeRange.from && range.to === activeRange.to;
 
-    startTransition(async () => {
+    if (isSameRange || isLoadingRange) {
+      return;
+    }
+
+    const requestId = latestRangeRequestId.current + 1;
+    latestRangeRequestId.current = requestId;
+    setIsLoadingRange(true);
+
+    try {
       const data = await fetchQuestionsByRange(type, range.from, range.to);
-      setQuestions(data);
-      setAnswers(
-        data.map(() => ({
-          selected: null,
-          showResult: false,
-          revealCorrect: false,
-        }))
-      );
-    });
+
+      if (latestRangeRequestId.current !== requestId) {
+        return;
+      }
+
+      startTransition(() => {
+        setQuestions(data);
+        setAnswers(
+          data.map(() => ({
+            selected: null,
+            showResult: false,
+            revealCorrect: false,
+          }))
+        );
+        setActiveRange(range);
+      });
+    } catch (error) {
+      console.error('Failed to load question range:', error);
+    } finally {
+      if (latestRangeRequestId.current === requestId) {
+        setIsLoadingRange(false);
+      }
+    }
   }
 
   function goNext() {
@@ -213,19 +259,34 @@ export default function QuestionsClient({
   }
 
   const localizedQuestions = useMemo(() => {
-  return questions.map((q) => {
-    const t = q.translations?.[lang.toLowerCase()] 
-           || q.translations?.he; 
+    return questions.map((q) => {
+      const t = q.translations?.[lang.toLowerCase()] || q.translations?.he;
+      const resolvedAudio = q.audio?.[lang.toLowerCase()] || q.audio?.he || null;
 
-    return {
-      id: q.id,
-      hasImage: q.hasImage,
-      image: q.image,
-      question: t.question,
-      options: t.options,
-    };
-  });
-}, [questions, lang]);
+      return {
+        docId: q.docId,
+        id: q.id,
+        hasImage: q.hasImage,
+        image: q.image,
+        questionAudioUrl: resolvedAudio?.question || null,
+        optionAudioUrls: resolvedAudio?.options || {},
+        question: t.question,
+        options: t.options,
+      };
+    });
+  }, [questions, lang]);
+
+  useEffect(() => {
+    const preloadItems = localizedQuestions.map((question) => ({
+      collectionName: `${type}questions`,
+      docId: question.docId,
+      questionAudioUrl: question.questionAudioUrl,
+      optionAudioUrls: question.optionAudioUrls || {},
+      optionKeys: Object.keys(question.options),
+    }));
+
+    preload(preloadItems);
+  }, [localizedQuestions, preload, type]);
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-6 mt-10">
@@ -292,22 +353,24 @@ export default function QuestionsClient({
           <div className="flex justify-between mt-6">
             <button
               onClick={goBack}
-              disabled={currentIndex === 0}
+              disabled={currentIndex === 0 || isLoadingRange}
               className="px-6 py-2 rounded bg-gray-300 dark:bg-gray-700 disabled:opacity-40"
             >
-             → אחורה
+              → אחורה
             </button>
 
             <button
               onClick={goNext}
-              disabled={currentIndex === ranges.length - 1}
+              disabled={currentIndex === ranges.length - 1 || isLoadingRange}
               className="px-6 py-2 rounded bg-blue-600 disabled:opacity-40"
             >
-             הבא ← 
+              הבא ←
             </button>
           </div>
 
-          {isPending && <p className="text-center opacity-50 mt-2">Loading…</p>}
+          {(isPending || isLoadingRange) && (
+            <p className="text-center opacity-50 mt-2">Loading…</p>
+          )}
         </div>
       </div>
     </div>

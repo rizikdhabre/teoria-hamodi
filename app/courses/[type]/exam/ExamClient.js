@@ -1,28 +1,54 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLanguage } from '@/app/context/LanguageContext';
 import { useQuestionSpeech } from '@/lib/useQuestionSpeech';
 
-/* ---------------- Helpers ---------------- */
+function buildCollectionName(source) {
+  return `${source}questions`;
+}
 
-function resolveQuestion(q, lang) {
-  const t = q.translations?.[lang.toLowerCase()] || q.translations?.he;
+function resolveQuestion(question, lang) {
+  const translation =
+    question.translations?.[lang.toLowerCase()] || question.translations?.he;
+  const resolvedAudio =
+    question.audio?.[lang.toLowerCase()] || question.audio?.he || null;
 
   return {
-    id: q.id,
-    source: q.source,
-    hasImage: q.hasImage,
-    image: q.image,
-    question: t.question,
-    options: t.options,
+    docId: question.docId,
+    id: question.id,
+    collectionName: buildCollectionName(question.source),
+    source: question.source,
+    hasImage: question.hasImage,
+    image: question.image,
+    questionAudioUrl: resolvedAudio?.question || null,
+    optionAudioUrls: resolvedAudio?.options || {},
+    question: translation.question,
+    options: translation.options,
   };
 }
 
-/* ---------------- Exam Question Card ---------------- */
+function buildAudioPayload(question) {
+  return {
+    collectionName: question.collectionName,
+    docId: question.docId,
+    questionAudioUrl: question.questionAudioUrl,
+    optionAudioUrls: question.optionAudioUrls || {},
+    optionKeys: Object.keys(question.options || {}),
+  };
+}
+
+function AudioButton({ isActive, onClick, className = '' }) {
+  return (
+    <button type="button" onClick={onClick} className={className}>
+      {isActive ? '⏹️' : '🔊'}
+    </button>
+  );
+}
 
 function ExamQuestion({ question, selected, onSelect, number, lang }) {
-  const { speak, stop, isSpeaking } = useQuestionSpeech(lang);
+  const { speak, stop, isSpeaking, statusMessage } = useQuestionSpeech(lang);
+  const audioPayload = buildAudioPayload(question);
 
   return (
     <div
@@ -42,22 +68,33 @@ function ExamQuestion({ question, selected, onSelect, number, lang }) {
           {number}. {question.question}
         </p>
 
-        {/* <button
-          type="button"
-          onClick={() => isSpeaking('q') ? stop() : speak(question.question, 'q')}
-          aria-label="Read question aloud"
-          className="shrink-0 w-10 h-10 rounded-full border border-gray-300 dark:border-gray-600
-                     flex items-center justify-center
-                     bg-white dark:bg-gray-900
-                     hover:bg-blue-50 dark:hover:bg-gray-700
-                     transition-colors"
-        >
-          {isSpeaking('q') ? '⏹️' : '🔊'}
-        </button> */}
+        <AudioButton
+          isActive={isSpeaking('q')}
+          onClick={() => {
+            isSpeaking('q')
+              ? stop()
+              : speak({
+                  ...audioPayload,
+                  type: 'question',
+                  id: 'q',
+                  includeOptions: true,
+                });
+          }}
+          className="shrink-0"
+        />
       </div>
 
+      {statusMessage && (
+        <p
+          className="mb-3 text-sm text-amber-700 dark:text-amber-300"
+          aria-live="polite"
+        >
+          {statusMessage}
+        </p>
+      )}
+
       <div className="space-y-2">
-        {Object.entries(question.options).map(([key, opt], index) => (
+        {Object.entries(question.options).map(([key, option], index) => (
           <div
             key={key}
             onClick={() => onSelect(key)}
@@ -66,21 +103,28 @@ function ExamQuestion({ question, selected, onSelect, number, lang }) {
                 selected === key
                   ? 'border-blue-500 bg-blue-900/30'
                   : 'border-gray-300 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700'
-              }`}
+              }
+            `}
           >
-            {/* <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); isSpeaking(key) ? stop() : speak(opt.text, key); }}
-              aria-label="Read answer aloud"
-              className="shrink-0 w-7 h-7 rounded-full
-                         flex items-center justify-center
-                         hover:bg-gray-300 dark:hover:bg-gray-600
-                         transition-colors text-sm"
-            >
-              {isSpeaking(key) ? '⏹️' : '🔊'}
-            </button> */}
+            <AudioButton
+              isActive={isSpeaking(key)}
+              onClick={(event) => {
+                event.stopPropagation();
+
+                isSpeaking(key)
+                  ? stop()
+                  : speak({
+                      ...audioPayload,
+                      type: 'option',
+                      optionKey: key,
+                      id: key,
+                      includeOptions: true,
+                    });
+              }}
+              className="shrink-0 text-sm"
+            />
             <span className="font-bold mr-2">({index + 1})</span>
-            {opt.text}
+            {option.text}
           </div>
         ))}
       </div>
@@ -88,7 +132,117 @@ function ExamQuestion({ question, selected, onSelect, number, lang }) {
   );
 }
 
-/* ---------------- Config ---------------- */
+function ExamResultRow({ result, question, lang, onPreview }) {
+  const { speak, stop, isSpeaking, statusMessage } = useQuestionSpeech(lang);
+  const localizedQuestion = resolveQuestion(question, lang);
+  const audioPayload = buildAudioPayload(localizedQuestion);
+  const correctText = result.correctKey
+    ? localizedQuestion.options[result.correctKey]?.text
+    : '';
+  const userText = result.userKey
+    ? localizedQuestion.options[result.userKey]?.text
+    : '';
+  const isCorrect = result.userKey === result.correctKey;
+
+  return (
+    <tr className="align-top text-right">
+      <td className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <p>
+            <b>{result.number}.</b> {localizedQuestion.question}
+          </p>
+
+          <AudioButton
+            isActive={isSpeaking('question')}
+            onClick={() => {
+              isSpeaking('question')
+                ? stop()
+                : speak({
+                    ...audioPayload,
+                    type: 'question',
+                    id: 'question',
+                    includeOptions: true,
+                  });
+            }}
+            className="shrink-0"
+          />
+        </div>
+
+        {statusMessage && (
+          <p
+            className="mt-2 text-sm text-amber-700 dark:text-amber-300"
+            aria-live="polite"
+          >
+            {statusMessage}
+          </p>
+        )}
+
+        {result.image && (
+          <img
+            src={`/question-images/${result.source}/${result.image}`}
+            alt=""
+            className="mt-2 max-h-[180px] cursor-pointer rounded"
+            onClick={() =>
+              onPreview(`/question-images/${result.source}/${result.image}`)
+            }
+          />
+        )}
+      </td>
+
+      <td className="p-4 text-green-600 font-bold">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <span className="w-full">{correctText}</span>
+
+          {result.correctKey && (
+            <AudioButton
+              isActive={isSpeaking('correct')}
+              onClick={() => {
+                isSpeaking('correct')
+                  ? stop()
+                  : speak({
+                      ...audioPayload,
+                      type: 'option',
+                      optionKey: result.correctKey,
+                      id: 'correct',
+                      includeOptions: true,
+                    });
+              }}
+              className="shrink-0 self-start sm:self-auto"
+            />
+          )}
+        </div>
+      </td>
+
+      <td
+        className={`p-4 font-bold ${
+          isCorrect ? 'text-green-600' : 'text-red-600'
+        }`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <span>{userText}</span>
+
+          {result.userKey && userText && (
+            <AudioButton
+              isActive={isSpeaking('user')}
+              onClick={() => {
+                isSpeaking('user')
+                  ? stop()
+                  : speak({
+                      ...audioPayload,
+                      type: 'option',
+                      optionKey: result.userKey,
+                      id: 'user',
+                      includeOptions: true,
+                    });
+              }}
+              className="shrink-0"
+            />
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}
 
 const EXAM_CONFIG = {
   car: { allowedWrong: 4, time: 40 * 60 },
@@ -101,63 +255,55 @@ const EXAM_CONFIG = {
   boat: { allowedWrong: 9, mandatoryAllowedWrong: 0, time: 60 * 60 },
 };
 
-/* ---------------- Main Exam Client ---------------- */
-
 export default function ExamClient({ type, questions }) {
   const { lang } = useLanguage();
-
-  /* 🔒 Freeze questions ONCE */
+  const { preload } = useQuestionSpeech(lang);
   const [examQuestions] = useState(() => questions);
 
   const PAGE_SIZE = 10;
   const config = EXAM_CONFIG[type];
   const EXAM_TIME = config?.time ?? 40 * 60;
-
   const totalPages = Math.ceil(examQuestions.length / PAGE_SIZE);
 
   const [currentPage, setCurrentPage] = useState(0);
-  const [answers, setAnswers] = useState(() =>
-    examQuestions.map(() => null)
-  );
+  const [answers, setAnswers] = useState(() => examQuestions.map(() => null));
   const [timeLeft, setTimeLeft] = useState(EXAM_TIME);
   const [examFinished, setExamFinished] = useState(false);
   const [results, setResults] = useState([]);
   const [previewImage, setPreviewImage] = useState(null);
 
-  /* ---------------- Timer ---------------- */
+  function formatTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
 
-  useEffect(() => {
-    if (examFinished) return;
-
-    if (timeLeft <= 0) {
-      submitExam();
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setTimeLeft((t) => t - 1);
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [timeLeft, examFinished]);
-
-  function formatTime(sec) {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m}:${String(s).padStart(2, '0')}`;
+    return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
   }
-
-  /* ---------------- Pagination ---------------- */
 
   const start = currentPage * PAGE_SIZE;
   const end = start + PAGE_SIZE;
-  const visibleRaw = examQuestions.slice(start, end);
+  const visibleQuestions = useMemo(
+    () =>
+      examQuestions
+        .slice(start, end)
+        .map((question) => resolveQuestion(question, lang)),
+    [examQuestions, start, end, lang]
+  );
+  const examQuestionsByDocId = useMemo(
+    () => new Map(examQuestions.map((question) => [question.docId, question])),
+    [examQuestions]
+  );
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPage]);
 
-  /* ---------------- Answer Handler ---------------- */
+  useEffect(() => {
+    const preloadItems = visibleQuestions.map((question) =>
+      buildAudioPayload(question)
+    );
+
+    preload(preloadItems);
+  }, [preload, visibleQuestions]);
 
   function handleSelect(globalIndex, key) {
     setAnswers((prev) => {
@@ -169,47 +315,65 @@ export default function ExamClient({ type, questions }) {
 
   function nextPage() {
     if (currentPage < totalPages - 1) {
-      setCurrentPage((p) => p + 1);
+      setCurrentPage((page) => page + 1);
     }
   }
 
   function prevPage() {
     if (currentPage > 0) {
-      setCurrentPage((p) => p - 1);
+      setCurrentPage((page) => page - 1);
     }
   }
 
-  /* ---------------- Submit Exam ---------------- */
-
-  function submitExam() {
-    const res = examQuestions.map((q, i) => {
-      const t =
-        q.translations?.[lang.toLowerCase()] ||
-        q.translations?.he;
-
-      const correctEntry = Object.entries(t.options).find(
-        ([, opt]) => opt.isTrue
+  const submitExam = useCallback(() => {
+    const nextResults = examQuestions.map((question, index) => {
+      const translation =
+        question.translations?.[lang.toLowerCase()] ||
+        question.translations?.he;
+      const correctEntry = Object.entries(translation.options).find(
+        ([, option]) => option.isTrue
       );
 
       return {
-        number: i + 1,
-        id: q.id,
-        source: q.source,
-        image: q.hasImage ? q.image : null,
+        number: index + 1,
+        docId: question.docId,
+        id: question.id,
+        source: question.source,
+        image: question.hasImage ? question.image : null,
         correctKey: correctEntry?.[0] ?? null,
-        userKey: answers[i],
+        userKey: answers[index],
       };
     });
 
-    setResults(res);
+    setResults(nextResults);
     setExamFinished(true);
-  }
+  }, [answers, examQuestions, lang]);
 
-  /* ---------------- Results ---------------- */
+  useEffect(() => {
+    if (examFinished || timeLeft > 0) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      submitExam();
+    }, 0);
+
+    return () => clearTimeout(timeout);
+  }, [examFinished, submitExam, timeLeft]);
+
+  useEffect(() => {
+    if (examFinished || timeLeft <= 0) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((time) => time - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [examFinished, timeLeft]);
 
   if (examFinished) {
     const wrongCount = results.filter(
-      (r) => r.userKey !== r.correctKey
+      (result) => result.userKey !== result.correctKey
     ).length;
 
     return (
@@ -228,56 +392,21 @@ export default function ExamClient({ type, questions }) {
               </tr>
             </thead>
             <tbody>
-              {results.map((r) => {
-                const q = examQuestions.find(
-                  (x) => x.id === r.id
-                );
-                const t =
-                  q.translations?.[lang.toLowerCase()] ||
-                  q.translations?.he;
+              {results.map((result) => {
+                const question = examQuestionsByDocId.get(result.docId);
 
-                const correctText = r.correctKey
-                  ? t.options[r.correctKey]?.text
-                  : '';
-
-                const userText = r.userKey
-                  ? t.options[r.userKey]?.text
-                  : '';
-
-                const isCorrect =
-                  r.userKey === r.correctKey;
+                if (!question) {
+                  return null;
+                }
 
                 return (
-                  <tr key={r.id} className="align-top text-right">
-                    <td className="p-4">
-                      <b>{r.number}.</b> {t.question}
-                      {r.image && (
-                        <img
-                          src={`/question-images/${r.source}/${r.image}`}
-                          className="mt-2 max-h-[180px] cursor-pointer rounded"
-                          onClick={() =>
-                            setPreviewImage(
-                              `/question-images/${r.source}/${r.image}`
-                            )
-                          }
-                        />
-                      )}
-                    </td>
-
-                    <td className="p-4 text-green-600 font-bold">
-                      {correctText}
-                    </td>
-
-                    <td
-                      className={`p-4 font-bold ${
-                        isCorrect
-                          ? 'text-green-600'
-                          : 'text-red-600'
-                      }`}
-                    >
-                      {userText}
-                    </td>
-                  </tr>
+                  <ExamResultRow
+                    key={result.docId}
+                    result={result}
+                    question={question}
+                    lang={lang}
+                    onPreview={setPreviewImage}
+                  />
                 );
               })}
             </tbody>
@@ -291,6 +420,7 @@ export default function ExamClient({ type, questions }) {
           >
             <img
               src={previewImage}
+              alt=""
               className="max-w-full max-h-full object-contain"
             />
           </div>
@@ -298,8 +428,6 @@ export default function ExamClient({ type, questions }) {
       </div>
     );
   }
-
-  /* ---------------- Exam View ---------------- */
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-6 mt-10">
@@ -313,10 +441,7 @@ export default function ExamClient({ type, questions }) {
             ⏱ {formatTime(timeLeft)}
           </div>
 
-          <button
-            onClick={submitExam}
-            className="p-2 bg-green-600 rounded"
-          >
+          <button onClick={submitExam} className="p-2 bg-green-600 rounded">
             הגש
           </button>
         </div>
@@ -337,19 +462,19 @@ export default function ExamClient({ type, questions }) {
         <div className="bg-gray-200 dark:bg-gray-800 p-4 rounded-xl h-fit lg:sticky lg:top-6">
           <h3 className="font-bold mb-4 text-center">מפת המבחן</h3>
           <div className="space-y-2" data-no-translate>
-            {Array.from({ length: totalPages }).map((_, i) => {
-              const from = i * PAGE_SIZE + 1;
+            {Array.from({ length: totalPages }).map((_, index) => {
+              const from = index * PAGE_SIZE + 1;
               const to = Math.min(
-                (i + 1) * PAGE_SIZE,
+                (index + 1) * PAGE_SIZE,
                 examQuestions.length
               );
 
               return (
                 <button
-                  key={i}
-                  onClick={() => setCurrentPage(i)}
+                  key={index}
+                  onClick={() => setCurrentPage(index)}
                   className={`w-full py-2 rounded ${
-                    currentPage === i
+                    currentPage === index
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600'
                   }`}
@@ -362,18 +487,15 @@ export default function ExamClient({ type, questions }) {
         </div>
 
         <div className="lg:col-span-3">
-          {visibleRaw.map((q, i) => {
-            const localized = resolveQuestion(q, lang);
-            const globalIndex = start + i;
+          {visibleQuestions.map((question, index) => {
+            const globalIndex = start + index;
 
             return (
               <ExamQuestion
-                key={q.id}
-                question={localized}
+                key={question.docId}
+                question={question}
                 selected={answers[globalIndex]}
-                onSelect={(key) =>
-                  handleSelect(globalIndex, key)
-                }
+                onSelect={(key) => handleSelect(globalIndex, key)}
                 number={globalIndex + 1}
                 lang={lang}
               />
