@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getCollection, toObjectId } from "@/lib/db";
 import { generateTTS } from "@/lib/elevenlabs";
 import { uploadToR2 } from "@/lib/r2";
+import { getAudioProfileVersion, getCurrentAudioEntry } from "@/lib/ttsProfile";
 
 const pendingTtsBundleJobs = new Map();
 const LOCK_TTL_MS = 30 * 1000;
@@ -76,11 +77,17 @@ function buildLockTimeoutResponse() {
 }
 
 function getExistingAudioUrl(doc, lang, type, optionKey) {
-  if (type === "question") {
-    return doc.audio?.[lang]?.question || null;
+  const currentAudio = getCurrentAudioEntry(doc, lang);
+
+  if (!currentAudio) {
+    return null;
   }
 
-  return doc.audio?.[lang]?.options?.[optionKey] || null;
+  if (type === "question") {
+    return currentAudio.question || null;
+  }
+
+  return currentAudio.options?.[optionKey] || null;
 }
 
 async function runPendingBundleJob(jobKey, createJob) {
@@ -329,6 +336,7 @@ export async function POST(req) {
     }
     const resolvedLang = doc.translations?.[lang] ? lang : "he";
     const translation = doc.translations?.[resolvedLang];
+    const audioProfileVersion = getAudioProfileVersion(resolvedLang);
     const bundleJobKey = buildBundleJobKey({
       collectionName,
       docId,
@@ -359,10 +367,10 @@ export async function POST(req) {
         }
 
         const currentDoc = await collection.findOne({ _id: objectId });
-        const currentQuestionUrl =
-          currentDoc?.audio?.[resolvedLang]?.question || null;
+        const currentAudio = getCurrentAudioEntry(currentDoc, resolvedLang);
+        const currentQuestionUrl = currentAudio?.question || null;
         const currentOptionUrls = {
-          ...(currentDoc?.audio?.[resolvedLang]?.options || {}),
+          ...(currentAudio?.options || {}),
         };
         const hasAllOptions = optionEntries.every(
           ([key]) => currentOptionUrls[key]
@@ -429,11 +437,11 @@ export async function POST(req) {
               const nextOptionEntries = Object.entries(
                 freshTranslation.options || {}
               );
+              const currentAudio = getCurrentAudioEntry(freshDoc, resolvedLang);
               const nextOptionUrls = {
-                ...(freshDoc?.audio?.[resolvedLang]?.options || {}),
+                ...(currentAudio?.options || {}),
               };
-              let nextQuestionUrl =
-                freshDoc?.audio?.[resolvedLang]?.question || null;
+              let nextQuestionUrl = currentAudio?.question || null;
               const audioUpdates = {};
 
               if (!nextQuestionUrl) {
@@ -470,6 +478,11 @@ export async function POST(req) {
               }
 
               if (Object.keys(audioUpdates).length > 0) {
+                if (audioProfileVersion) {
+                  audioUpdates[`audioMeta.${resolvedLang}.profileVersion`] =
+                    audioProfileVersion;
+                }
+
                 await runWhileLocked(() =>
                   updateWhileLockOwner({
                     collection,
@@ -631,6 +644,12 @@ export async function POST(req) {
                 update: {
                   $set: {
                     [updatePath]: generatedUrl,
+                    ...(audioProfileVersion
+                      ? {
+                          [`audioMeta.${resolvedLang}.profileVersion`]:
+                            audioProfileVersion,
+                        }
+                      : {}),
                   },
                 },
               })

@@ -1,5 +1,6 @@
 "use server";
 import { getCollection } from "@/lib/db";
+import { getCurrentAudioMap } from "@/lib/ttsProfile";
 
 export async function fetchQuestionsByRange(type, from, to) {
   const collection = await getCollection(`${type}questions`);
@@ -15,7 +16,7 @@ export async function fetchQuestionsByRange(type, from, to) {
     id: q.id,
     hasImage: q.hasImage,
     image: q.image,
-    audio: q.audio || null,
+    audio: getCurrentAudioMap(q),
     translations: q.translations,
   }));
 }

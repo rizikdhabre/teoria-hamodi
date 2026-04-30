@@ -1,4 +1,5 @@
 import { getCollection } from '@/lib/db';
+import { getCurrentAudioMap } from '@/lib/ttsProfile';
 import ExamClient from './ExamClient';
 
 function serializeExamQuestion(question, source) {
@@ -8,7 +9,7 @@ function serializeExamQuestion(question, source) {
     source,
     hasImage: question.hasImage,
     image: question.image,
-    audio: question.audio || null,
+    audio: getCurrentAudioMap(question),
     translations: question.translations,
   };
 }
