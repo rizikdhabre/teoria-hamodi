@@ -76,7 +76,7 @@ export async function POST(req) {
     const prompt = `
 You are a translation engine.
 Translate EACH item in this JSON array into ${targetLang}.
-Return ONLY a JSON array of translated strings, same order (if you see חמודי  translate in arabic into : حمودي ).
+Return ONLY a JSON array of translated strings, same order (if you see חמודי  translate in arabic into : حمودي ) also theory in arabic = تؤوريا.
 
 ${JSON.stringify(missing)}
 `;
