@@ -1,6 +1,5 @@
 import { getCollection } from '@/lib/db';
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
 
 export async function POST(request) {
@@ -32,14 +31,18 @@ export async function POST(request) {
     if (!isValid) {
       return NextResponse.json({ message: 'סיסמה שגויה' }, { status: 401 });
     }
-    cookies().set('sea_course_access', 'true', {
-  httpOnly: true,
-  secure: true,
-  sameSite: 'lax',
-  path: '/',
-  maxAge: 60 * 60 * 0.25,
-});
-    return NextResponse.json({ success: true }, { status: 200 });
+
+    const response = NextResponse.json({ success: true }, { status: 200 });
+
+    response.cookies.set('sea_course_access', 'true', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 15 * 60,
+    });
+
+    return response;
   } catch (error) {
     console.error('Error in logged to Course, error', error);
 

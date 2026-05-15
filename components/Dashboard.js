@@ -4,11 +4,15 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
+
+const RESTRICTED_COURSES = ['jetski', 'boat'];
+
 export default function HomePage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [current, setCurrent] = useState(0);
   const [prev, setPrev] = useState(null);
   const [dir, setDir] = useState('ltr');
@@ -24,16 +28,32 @@ export default function HomePage() {
   const totalImages = 3;
   const fadeDuration = 1.2;
   const intervalMs = 7000;
-  const restrictedCourses = ['jetski', 'boat'];
+
+  const openPasswordModal = (courseLink) => {
+    setPendingLink(courseLink);
+    setPassword('');
+    setError('');
+    setShowPasswordModal(true);
+  };
 
   const handleCourses = (course) => {
-    if (status !== 'authenticated') {
-      router.push(`/login?callbackUrl=${encodeURIComponent(course.link)}`);
+    const isRestrictedCourse = RESTRICTED_COURSES.includes(course.id);
+
+    if (status === 'loading') {
       return;
     }
-    if (restrictedCourses.includes(course.id)) {
-      setShowPasswordModal(true);
-      setPendingLink(course.link);
+
+    if (status !== 'authenticated') {
+      const callbackUrl = isRestrictedCourse
+        ? `/?courseAccess=${course.id}`
+        : course.link;
+
+      router.push(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+      return;
+    }
+
+    if (isRestrictedCourse) {
+      openPasswordModal(course.link);
       return;
     }
 
@@ -73,12 +93,14 @@ export default function HomePage() {
     try {
       const res = await axios.post('/api/coursePassword', { password });
       if (res.data.success) {
+        const nextLink = pendingLink;
+
         setShowPasswordModal(false);
         setPassword('');
         setError('');
-        if (pendingLink) {
-          router.push(pendingLink);
+        if (nextLink) {
           setPendingLink(null);
+          window.location.assign(nextLink);
         }
       }
     } catch (err) {
@@ -86,6 +108,20 @@ export default function HomePage() {
       console.log(err.response?.data?.message);
     }
   };
+
+  useEffect(() => {
+    if (status !== 'authenticated') {
+      return;
+    }
+
+    const requestedCourse = searchParams.get('courseAccess');
+    if (!requestedCourse || !RESTRICTED_COURSES.includes(requestedCourse)) {
+      return;
+    }
+
+    openPasswordModal(`/courses/${requestedCourse}`);
+    router.replace('/');
+  }, [router, searchParams, status]);
 
   useEffect(() => {
     const dir = document.documentElement.dir || 'ltr';
@@ -447,7 +483,7 @@ export default function HomePage() {
 
       {showRecoveryModal && (
         <div
-          className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center"
+          className="fixed inset-0 z-60 bg-black/70 flex items-center justify-center"
           onClick={() => {
             // ⬅️ click outside closes modal
             setShowRecoveryModal(false);

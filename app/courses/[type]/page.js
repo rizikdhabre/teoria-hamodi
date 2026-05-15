@@ -6,17 +6,21 @@ import { redirect } from 'next/navigation';
 
 export default async function CoursePage({ params }) {
   const { type } = params;
-  const session = await getServerSession(authOptions);
-  if(!session) {
-    redirect('/login?callbackUrl=' + encodeURIComponent(`/courses/${type}`));
-  }
   const isSeaCourse = type === 'boat' || type === 'jetski';
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    const callbackUrl = isSeaCourse
+      ? `/?courseAccess=${type}`
+      : `/courses/${type}`;
 
-if(isSeaCourse) {
+    redirect('/login?callbackUrl=' + encodeURIComponent(callbackUrl));
+  }
+
+  if (isSeaCourse) {
     const cookieStore = cookies();
     const hasAccess = cookieStore.get('sea_course_access');
     if (!hasAccess) {
-      redirect('/');
+      redirect('/?courseAccess=' + encodeURIComponent(type));
     }
   }
 
