@@ -7,7 +7,14 @@ import { useQuestionSpeech } from '@/lib/useQuestionSpeech';
 
 /* ---------------- Question Card ---------------- */
 
-function QuestionCard({ question, type, answerState, onSelect, onReveal }) {
+function QuestionCard({
+  question,
+  type,
+  answerState,
+  onSelect,
+  onReveal,
+  displayNumber,
+}) {
   const { lang } = useLanguage();
   const { speak, stop, isSpeaking, statusMessage } = useQuestionSpeech(lang);
   const { selected, showResult, revealCorrect } = answerState;
@@ -44,7 +51,7 @@ function QuestionCard({ question, type, answerState, onSelect, onReveal }) {
           onClick={onReveal}
           className="font-semibold cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
         >
-          {question.id}. {question.question}
+          {displayNumber}. {question.question}
         </p>
 
         <button
@@ -340,12 +347,13 @@ export default function QuestionsClient({
         <div className="lg:col-span-3">
           {localizedQuestions.map((q, i) => (
             <QuestionCard
-              key={q.id}
+              key={q.docId}
               question={q}
               type={type}
               answerState={answers[i]}
               onSelect={(key) => handleAnswer(i, key)}
               onReveal={() => revealOnly(i)}
+              displayNumber={activeRange.from + i}
             />
           ))}
 

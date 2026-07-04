@@ -5,13 +5,23 @@ import ExamClient from './ExamClient';
 function serializeExamQuestion(question, source) {
   return {
     docId: question._id.toString(),
-    id: question.id,
+    id: question.id, // keep original id for static images
     source,
     hasImage: question.hasImage,
     image: question.image,
     audio: getCurrentAudioMap(question),
     translations: question.translations,
   };
+}
+
+// This replaces getRandomIds()
+// It randomly picks REAL existing documents from MongoDB
+async function getRandomQuestions(collection, count, source) {
+  const questions = await collection
+    .aggregate([{ $sample: { size: count } }])
+    .toArray();
+
+  return questions.map((q) => serializeExamQuestion(q, source));
 }
 
 export default async function ExamPage({ params }) {
@@ -21,52 +31,35 @@ export default async function ExamPage({ params }) {
 
   const mainCollection = await getCollection(`${type}questions`);
 
-  // helper
-  function getRandomIds(max, count) {
-    const set = new Set();
-    while (set.size < count) {
-      // eslint-disable-next-line react-hooks/purity
-      set.add(Math.floor(Math.random() * max) + 1);
-    }
-    return [...set];
-  }
-
   let questions = [];
 
- 
+  // SAME LOGIC AS BEFORE:
+  // For all types except boat/jetski:
+  // 25 car questions + remaining questions from selected type
   if (type !== 'boat' && type !== 'jetski') {
     const carCollection = await getCollection('carquestions');
 
-    const carCount = await carCollection.countDocuments();
-    const mainCount = await mainCollection.countDocuments();
+    const carQuestions = await getRandomQuestions(
+      carCollection,
+      25,
+      'car'
+    );
 
-    const carIds = getRandomIds(carCount, 25);
-    const mainIds = getRandomIds(mainCount, totalSize - 25); // 5
-
-    const carQuestions = (
-      await carCollection
-        .find({ id: { $in: carIds } })
-        .toArray()
-    ).map((q) => serializeExamQuestion(q, 'car'));
-
-    const mainQuestions = (
-      await mainCollection
-        .find({ id: { $in: mainIds } })
-        .toArray()
-    ).map((q) => serializeExamQuestion(q, type));
+    const mainQuestions = await getRandomQuestions(
+      mainCollection,
+      totalSize - 25, // same as before: 5
+      type
+    );
 
     questions = [...carQuestions, ...mainQuestions];
   }
- 
-  else {
-    const count = await mainCollection.countDocuments();
-    const ids = getRandomIds(count, totalSize);
 
-    questions = (
-      await mainCollection
-        .find({ id: { $in: ids } })
-        .toArray()
-    ).map((q) => serializeExamQuestion(q, type));
+  else {
+    questions = await getRandomQuestions(
+      mainCollection,
+      totalSize,
+      type
+    );
   }
 
   return (
