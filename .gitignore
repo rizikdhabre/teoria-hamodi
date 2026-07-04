@@ -70,3 +70,9 @@ coverage/
 # Optional: Uploads (if you ever add them)
 ####################################
 uploads/
+
+
+####################################
+# Local scripts / verification tools
+####################################
+scripts/
