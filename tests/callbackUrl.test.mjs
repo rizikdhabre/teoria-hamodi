@@ -48,6 +48,25 @@ test('rejects encoded and repeatedly encoded backslashes or protocol-relative fo
   }
 });
 
+test('rejects protocol-relative paths created by URL dot-segment normalization', () => {
+  const invalid = ['/.//evil.example/steal', '/%2e%2e//evil.example/steal'];
+  for (const candidate of invalid) {
+    assert.equal(sanitizeCallbackUrl(candidate, TRUSTED_ORIGIN), '/');
+  }
+});
+
+test('rejects non-HTTP, incomplete, and encoded URI schemes', () => {
+  const invalid = [
+    'blob:https://theory-hamodi.com/object',
+    'https:evil.example',
+    'javascript%3Aalert(1)',
+    'data%3Atext/html,evil',
+  ];
+  for (const candidate of invalid) {
+    assert.equal(sanitizeCallbackUrl(candidate, TRUSTED_ORIGIN), '/');
+  }
+});
+
 test('fails closed when validation cannot reach a stable decoded form within the pass limit', () => {
   assert.equal(
     sanitizeCallbackUrl(
