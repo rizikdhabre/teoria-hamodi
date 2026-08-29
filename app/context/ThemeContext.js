@@ -13,23 +13,30 @@ const ThemeContext = createContext();
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(DEFAULT_THEME);
   const storageRef = useRef(null);
-  const skippedInitialPersistence = useRef(false);
+  const restoredThemeRef = useRef(false);
 
   useEffect(() => {
+    let cancelled = false;
     const storage = getSafeLocalStorage(
       typeof window === 'undefined' ? undefined : window,
     );
     storageRef.current = storage;
-    const restored = readStoredTheme(storage);
-    setTheme(restored);
-    document.documentElement.classList.toggle('dark', restored === 'dark');
+
+    queueMicrotask(() => {
+      if (cancelled) return;
+      const restored = readStoredTheme(storage);
+      document.documentElement.classList.toggle('dark', restored === 'dark');
+      restoredThemeRef.current = true;
+      setTheme(restored);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    if (!skippedInitialPersistence.current) {
-      skippedInitialPersistence.current = true;
-      return;
-    }
+    if (!restoredThemeRef.current) return;
     document.documentElement.classList.toggle('dark', theme === 'dark');
     writeStoredTheme(storageRef.current, theme);
   }, [theme]);

@@ -29,7 +29,7 @@ export default async function RootLayout({ children }) {
   const [htmlLang, dir] = map[lang] || map.HE;
 
   return (
-    <html lang={htmlLang} dir={dir} suppressHydrationWarning>
+    <html className="dark" lang={htmlLang} dir={dir} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -37,7 +37,9 @@ export default async function RootLayout({ children }) {
       (function () {
         try {
           var theme = localStorage.getItem('theme');
-          if (theme === 'dark') {
+          if (theme === 'light') {
+            document.documentElement.classList.remove('dark');
+          } else {
             document.documentElement.classList.add('dark');
           }
         } catch (e) {}
