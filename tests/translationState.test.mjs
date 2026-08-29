@@ -70,6 +70,38 @@ test('a failed source stays failed when its registration updates and only a new 
   assert.deepEqual(state.createRequest().sources, ['ב']);
 });
 
+test('a language transition retains failures for registrations created in Hebrew and requests only a new source', () => {
+  const state = createTranslationState();
+  state.register('page', ['כותרת', 'תיאור']);
+  state.setScope('/lesson', 'EN');
+  const failedRequest = state.createRequest();
+  assert.deepEqual(failedRequest.sources, ['כותרת', 'תיאור']);
+  assert.equal(state.markFailed(failedRequest), true);
+
+  state.unregister('page');
+  state.register('page', ['תיאור', 'חדש', 'כותרת']);
+
+  assert.deepEqual(state.createRequest().sources, ['חדש']);
+  assert.equal(state.translate('כותרת', '/lesson', 'EN'), 'כותרת');
+  assert.equal(state.translate('תיאור', '/lesson', 'EN'), 'תיאור');
+});
+
+test('a pathname transition retains failures for existing registrations after growth and reorder', () => {
+  const state = createTranslationState();
+  state.setScope('/catalog', 'EN');
+  state.register('page', ['מוצר', 'מחיר']);
+  state.setScope('/details', 'EN');
+  const failedRequest = state.createRequest();
+  assert.deepEqual(failedRequest.sources, ['מוצר', 'מחיר']);
+  assert.equal(state.markFailed(failedRequest), true);
+
+  state.register('page', ['מחיר', 'זמינות', 'מוצר']);
+
+  assert.deepEqual(state.createRequest().sources, ['זמינות']);
+  assert.equal(state.translate('מוצר', '/details', 'EN'), 'מוצר');
+  assert.equal(state.translate('מחיר', '/details', 'EN'), 'מחיר');
+});
+
 test('language metadata is RTL for HE/AR and LTR for EN', () => {
   assert.deepEqual(getLanguageMeta('HE'), { code: 'HE', htmlLang: 'he', dir: 'rtl', targetLang: 'Hebrew' });
   assert.equal(getLanguageMeta('AR').dir, 'rtl');
