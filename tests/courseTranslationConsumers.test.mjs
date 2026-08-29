@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import babelParser from 'next/dist/compiled/babel/parser.js';
 import { createTranslationState } from '../lib/translationState.mjs';
+
+const { parse } = babelParser;
 
 const read = (file) =>
   readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
@@ -47,22 +50,91 @@ function extractStringArray(source, constant) {
   );
 }
 
-function translationInput(source) {
-  const marker = 'useTranslationStrings(';
-  const start = source.indexOf(marker);
-  assert.notEqual(start, -1, 'consumer must call useTranslationStrings');
-  return balancedContents(source, start + marker.length - 1, '(', ')').trim();
+function parseSource(source) {
+  return parse(source, { sourceType: 'module', plugins: ['jsx'] });
 }
 
-function assertDirectTRenders(source, sources) {
+function walkAst(node, visit, ancestors = []) {
+  if (!node || typeof node !== 'object') return;
+  if (Array.isArray(node)) {
+    for (const child of node) walkAst(child, visit, ancestors);
+    return;
+  }
+
+  const nextAncestors = typeof node.type === 'string'
+    ? [...ancestors, node]
+    : ancestors;
+  if (typeof node.type === 'string') visit(node, ancestors);
+
+  for (const [key, child] of Object.entries(node)) {
+    if (key === 'loc' || key === 'start' || key === 'end') continue;
+    walkAst(child, visit, nextAncestors);
+  }
+}
+
+function translationInputs(source) {
+  const inputs = [];
+  walkAst(parseSource(source), (node) => {
+    if (
+      node.type !== 'CallExpression' ||
+      node.callee.type !== 'Identifier' ||
+      node.callee.name !== 'useTranslationStrings'
+    ) {
+      return;
+    }
+
+    inputs.push(
+      node.arguments.length === 1 && node.arguments[0].type === 'Identifier'
+        ? node.arguments[0].name
+        : null
+    );
+  });
+  return inputs;
+}
+
+function assertTranslationRegistrations(source, constant) {
+  assert.deepEqual(
+    translationInputs(source),
+    [constant],
+    'consumer must have exactly one audited useTranslationStrings registration'
+  );
+}
+
+function liveTranslationCounts(source) {
+  const counts = new Map();
+  walkAst(parseSource(source), (node, ancestors) => {
+    if (
+      node.type !== 'CallExpression' ||
+      node.callee.type !== 'Identifier' ||
+      node.callee.name !== 't' ||
+      node.arguments.length !== 1 ||
+      node.arguments[0].type !== 'StringLiteral' ||
+      !ancestors.some((ancestor) => ancestor.type === 'JSXExpressionContainer')
+    ) {
+      return;
+    }
+
+    const text = node.arguments[0].value;
+    counts.set(text, (counts.get(text) ?? 0) + 1);
+  });
+  return counts;
+}
+
+function assertDirectTRenders(source, sources, countOverrides = {}) {
+  const counts = liveTranslationCounts(source);
   for (const text of sources) {
-    const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    assert.match(
-      source,
-      new RegExp(`t\\('${escaped}'\\)`),
-      `visible source ${text} must render through t`
+    const expectedCount = countOverrides[text] ?? 1;
+    assert.equal(
+      counts.get(text) ?? 0,
+      expectedCount,
+      `expected ${expectedCount} live JSX translation expression for ${text}`
     );
   }
+  assert.deepEqual(
+    [...counts.keys()].sort(),
+    [...sources].sort(),
+    'live JSX translation calls must use only audited registered sources'
+  );
 }
 
 function registerExtractedSources(state, id, source, constant, expected) {
@@ -72,11 +144,7 @@ function registerExtractedSources(state, id, source, constant, expected) {
     expected,
     `${constant} must contain only the exact static shell sources`
   );
-  assert.equal(
-    translationInput(source),
-    constant,
-    `${constant} must be the complete registration input`
-  );
+  assertTranslationRegistrations(source, constant);
   state.register(id, sources);
 }
 
@@ -104,6 +172,7 @@ function extractCallArguments(source, callee) {
 }
 
 function assertServerDelegation(source) {
+  const ast = parseSource(source);
   assert.doesNotMatch(source, /^['"]use client['"];?/m);
   assert.match(
     source,
@@ -113,6 +182,32 @@ function assertServerDelegation(source) {
   const guardIndex = source.indexOf('await requireCourseAccess(');
   const clientIndex = source.indexOf('<CourseLandingClient');
   assert.ok(guardIndex !== -1 && guardIndex < clientIndex);
+  let hasValidatedGuardBinding = false;
+  walkAst(ast, (node) => {
+    if (
+      node.type !== 'VariableDeclarator' ||
+      node.id.type !== 'ObjectPattern' ||
+      node.init?.type !== 'AwaitExpression' ||
+      node.init.argument?.type !== 'CallExpression' ||
+      node.init.argument.callee?.type !== 'Identifier' ||
+      node.init.argument.callee.name !== 'requireCourseAccess'
+    ) {
+      return;
+    }
+
+    hasValidatedGuardBinding = node.id.properties.some(
+      (property) =>
+        property.type === 'ObjectProperty' &&
+        property.key.type === 'Identifier' &&
+        property.key.name === 'type' &&
+        property.value.type === 'Identifier' &&
+        property.value.name === 'validatedType'
+    );
+  });
+  assert.ok(
+    hasValidatedGuardBinding,
+    'validatedType must come from the awaited requireCourseAccess result'
+  );
   assert.match(
     source,
     /<CourseLandingClient\s+type=\{validatedType\}\s+isSeaCourse=\{isSeaCourse\(validatedType\)\}\s*\/>/s
@@ -258,32 +353,18 @@ test('every registered course shell source is rendered through t', () => {
   assertDirectTRenders(landing, LANDING_SOURCES);
   assertDirectTRenders(loading, LOADING_SOURCES);
   assertDirectTRenders(questions, QUESTION_SOURCES);
-  assertDirectTRenders(exam, EXAM_SOURCES);
-  assert.equal(
-    (questions.match(/t\('מפת שאלות'\)/g) ?? []).length,
-    1,
-    'the second map label has a distinct icon-bearing source'
-  );
-  assert.equal(
-    (exam.match(/t\('הגש'\)/g) ?? []).length,
-    2,
-    'both exam submit controls must react to language changes'
-  );
+  assertDirectTRenders(exam, EXAM_SOURCES, { הגש: 2 });
 });
 
 test('question documents and audio never enter page translation registration', () => {
   const questions = read('app/courses/[type]/questions/QuestionsClient.js');
   const exam = read('app/courses/[type]/exam/ExamClient.js');
 
-  for (const [name, source, constant] of [
-    ['QuestionsClient', questions, 'QUESTION_SHELL_HEBREW_SOURCES'],
-    ['ExamClient', exam, 'EXAM_SHELL_HEBREW_SOURCES'],
+  for (const [source, constant] of [
+    [questions, 'QUESTION_SHELL_HEBREW_SOURCES'],
+    [exam, 'EXAM_SHELL_HEBREW_SOURCES'],
   ]) {
-    assert.equal(
-      translationInput(source),
-      constant,
-      `${name} must register its audited presentation constant only`
-    );
+    assertTranslationRegistrations(source, constant);
   }
 
   assertQuestionResolution(questions, exam);
@@ -348,6 +429,39 @@ test('contract checks reject realistic validated-type, rendering, and audio muta
   const page = read('app/courses/[type]/page.js');
   const questions = read('app/courses/[type]/questions/QuestionsClient.js');
   const exam = read('app/courses/[type]/exam/ExamClient.js');
+  const leakMutation = questions.replace(
+    'const t = useTranslationStrings(QUESTION_SHELL_HEBREW_SOURCES);',
+    `const t = useTranslationStrings(QUESTION_SHELL_HEBREW_SOURCES);
+  useTranslationStrings(initialQuestions);`
+  );
+  const provenanceMutation = page.replace(
+    'const { type: validatedType } = await requireCourseAccess(',
+    'const validatedType = type;\n  await requireCourseAccess('
+  );
+  const deadRenderMutation = `${questions.replace(
+    "{t('מפת שאלות')}",
+    "{'מפת שאלות'}"
+  )}\n// t('מפת שאלות')`;
+
+  assert.throws(
+    () =>
+      registerExtractedSources(
+        createTranslationState(),
+        'questions',
+        leakMutation,
+        'QUESTION_SHELL_HEBREW_SOURCES',
+        QUESTION_SOURCES
+      ),
+    /exactly one audited useTranslationStrings registration/
+  );
+  assert.throws(
+    () => assertServerDelegation(provenanceMutation),
+    /validatedType must come from the awaited requireCourseAccess result/
+  );
+  assert.throws(
+    () => assertDirectTRenders(deadRenderMutation, QUESTION_SOURCES),
+    /live JSX translation expression for מפת שאלות/
+  );
 
   assert.throws(
     () =>
