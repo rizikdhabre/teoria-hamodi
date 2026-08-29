@@ -322,11 +322,10 @@ TranslationProvider uses usePathname and useLanguage, stores the pure state obje
 export function useTranslationStrings(hebrewSources) {
   const context = useContext(TranslationContext);
   const registrationId = useId();
-  const sources = dedupeExactSources(hebrewSources);
-  const signature = JSON.stringify(sources);
+  const signature = JSON.stringify(dedupeExactSources(hebrewSources));
 
   useEffect(() => {
-    return context.register(registrationId, sources);
+    return context.register(registrationId, JSON.parse(signature));
   }, [context.register, registrationId, signature]);
 
   return context.translate;
@@ -337,7 +336,7 @@ The provider's request effect waits one short batch interval, calls only /api/tr
 
 - [ ] **Step 5: Replace the active DOM integration**
 
-Modify LanguageContext to remove useRouter/router.refresh. changeLang normalizes the code, writes the existing lang cookie, updates state, and never navigates. A guarded effect updates document.documentElement.lang and dir from getLanguageMeta.
+Modify LanguageContext to remove useRouter/router.refresh. changeLang normalizes the code, writes the existing lang cookie, updates state, and never navigates. A guarded effect updates document.documentElement.lang and dir from getLanguageMeta. The context value exposes { lang, dir, changeLang }, with dir derived from getLanguageMeta(lang), so Dashboard never needs a DOM snapshot.
 
 Modify ClientProviders to mount TranslationProvider inside LanguageProvider and remove TranslationManager.
 
