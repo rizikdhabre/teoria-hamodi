@@ -198,28 +198,24 @@ function assertServerDelegation(source) {
   );
   assert.ok(returnStatement, 'CoursePage must return its client presentation');
 
+  const returnedClient = returnStatement.argument;
+  assert.ok(
+    returnedClient?.type === 'JSXElement' &&
+      returnedClient.openingElement.name.type === 'JSXIdentifier' &&
+      returnedClient.openingElement.name.name === 'CourseLandingClient',
+    'CourseLandingClient must be the direct CoursePage return value'
+  );
+  const typeAttribute = returnedClient.openingElement.attributes.find(
+    (attribute) =>
+      attribute.type === 'JSXAttribute' && attribute.name.name === 'type'
+  );
   const renderedTypeIdentifiers = [];
-  walkAst(returnStatement.argument, (node) => {
-    if (
-      node.type !== 'JSXOpeningElement' ||
-      node.name.type !== 'JSXIdentifier' ||
-      node.name.name !== 'CourseLandingClient'
-    ) {
-      return;
-    }
-
-    const typeAttribute = node.attributes.find(
-      (attribute) =>
-        attribute.type === 'JSXAttribute' &&
-        attribute.name.name === 'type'
-    );
-    if (
-      typeAttribute?.value?.type === 'JSXExpressionContainer' &&
-      typeAttribute.value.expression.type === 'Identifier'
-    ) {
-      renderedTypeIdentifiers.push(typeAttribute.value.expression.name);
-    }
-  });
+  if (
+    typeAttribute?.value?.type === 'JSXExpressionContainer' &&
+    typeAttribute.value.expression.type === 'Identifier'
+  ) {
+    renderedTypeIdentifiers.push(typeAttribute.value.expression.name);
+  }
   assert.deepEqual(
     renderedTypeIdentifiers,
     ['validatedType'],
@@ -506,6 +502,23 @@ test('contract checks reject realistic validated-type, rendering, and audio muta
     return validatedType;
   }`
   );
+  const nestedReturnMutation = page.replace(
+    `return (
+    <CourseLandingClient
+      type={validatedType}
+      isSeaCourse={isSeaCourse(validatedType)}
+    />
+  );`,
+    `return (() => {
+    const validatedType = type;
+    return (
+      <CourseLandingClient
+        type={validatedType}
+        isSeaCourse={isSeaCourse(validatedType)}
+      />
+    );
+  })();`
+  );
   const deadRenderMutation = `${questions.replace(
     "{t('מפת שאלות')}",
     "{'מפת שאלות'}"
@@ -533,6 +546,10 @@ test('contract checks reject realistic validated-type, rendering, and audio muta
   assert.throws(
     () => assertServerDelegation(nestedDecoyMutation),
     /rendered type binding must be the top-level guard-result property/
+  );
+  assert.throws(
+    () => assertServerDelegation(nestedReturnMutation),
+    /CourseLandingClient must be the direct CoursePage return value/
   );
   assert.throws(
     () => assertDirectTRenders(deadRenderMutation, QUESTION_SOURCES),
