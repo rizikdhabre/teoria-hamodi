@@ -1,26 +1,42 @@
 'use client';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import {
+  DEFAULT_THEME,
+  getSafeLocalStorage,
+  readStoredTheme,
+  toggleThemeValue,
+  writeStoredTheme,
+} from '../../lib/themeStorage.mjs';
 
 const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(null); // ← important
+  const [theme, setTheme] = useState(DEFAULT_THEME);
+  const storageRef = useRef(null);
+  const skippedInitialPersistence = useRef(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem('theme') || 'dark';
-    setTheme(saved);
+    const storage = getSafeLocalStorage(
+      typeof window === 'undefined' ? undefined : window,
+    );
+    storageRef.current = storage;
+    const restored = readStoredTheme(storage);
+    setTheme(restored);
+    document.documentElement.classList.toggle('dark', restored === 'dark');
   }, []);
+
   useEffect(() => {
-    if (!theme) return;
+    if (!skippedInitialPersistence.current) {
+      skippedInitialPersistence.current = true;
+      return;
+    }
     document.documentElement.classList.toggle('dark', theme === 'dark');
-    localStorage.setItem('theme', theme);
+    writeStoredTheme(storageRef.current, theme);
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+    setTheme((prev) => toggleThemeValue(prev));
   };
-
-  if (!theme) return null; 
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
