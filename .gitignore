@@ -76,3 +76,6 @@ uploads/
 # Local scripts / verification tools
 ####################################
 scripts/
+
+# Local isolated implementation worktrees
+.worktrees/
