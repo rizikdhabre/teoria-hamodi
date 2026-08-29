@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLanguage } from '@/app/context/LanguageContext';
+import { useTranslationStrings } from '@/app/context/TranslationContext';
 import { useQuestionSpeech } from '@/lib/useQuestionSpeech';
 
 function buildCollectionName(source) {
@@ -50,10 +51,7 @@ function ExamQuestion({ question, selected, onSelect, number, lang }) {
   const audioPayload = buildAudioPayload(question);
 
   return (
-    <div
-      data-no-translate
-      className="bg-gray-200 dark:bg-gray-800 p-5 rounded-xl mb-4"
-    >
+    <div className="bg-gray-200 dark:bg-gray-800 p-5 rounded-xl mb-4">
       {question.hasImage && question.image && (
         <img
           src={`/question-images/${question.source}/${question.image}`}
@@ -254,8 +252,23 @@ const EXAM_CONFIG = {
   boat: { allowedWrong: 9, mandatoryAllowedWrong: 0, time: 60 * 60 },
 };
 
+const EXAM_SHELL_HEBREW_SOURCES = [
+  'סיכום טעויות',
+  'שאלה',
+  'התשובה הנכונה',
+  'התשובה שלך',
+  'מבחן – שאלות',
+  'הגש',
+  'טעויות רגילות מותרות:',
+  'טעויות בשאלות חובה:',
+  'מפת המבחן',
+  '→ אחורה',
+  'הבא ←',
+];
+
 export default function ExamClient({ type, questions }) {
   const { lang } = useLanguage();
+  const t = useTranslationStrings(EXAM_SHELL_HEBREW_SOURCES);
   const { preload } = useQuestionSpeech(lang);
   const [examQuestions] = useState(() => questions);
 
@@ -378,16 +391,16 @@ export default function ExamClient({ type, questions }) {
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-6 mt-10">
         <h2 className="text-2xl font-bold mb-6 text-center">
-          סיכום טעויות ({wrongCount})
+          {t('סיכום טעויות')} ({wrongCount})
         </h2>
 
-        <div data-no-translate className="overflow-x-auto">
+        <div className="overflow-x-auto">
           <table className="w-full table-fixed border border-gray-300 dark:border-gray-700 text-sm">
             <thead className="bg-gray-200 dark:bg-gray-800">
               <tr>
-                <th className="p-2 w-[40%]">שאלה</th>
-                <th className="p-2 w-[32%]">התשובה הנכונה</th>
-                <th className="p-2 w-[28%]">התשובה שלך</th>
+                <th className="p-2 w-[40%]">{t('שאלה')}</th>
+                <th className="p-2 w-[32%]">{t('התשובה הנכונה')}</th>
+                <th className="p-2 w-[28%]">{t('התשובה שלך')}</th>
               </tr>
             </thead>
             <tbody>
@@ -433,7 +446,8 @@ export default function ExamClient({ type, questions }) {
       <div className="mb-6">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-bold">
-            מבחן – שאלות {start + 1}–{Math.min(end, examQuestions.length)}
+            {t('מבחן – שאלות')} {start + 1}–
+            {Math.min(end, examQuestions.length)}
           </h2>
 
           <div className="text-red-400 font-mono text-lg">
@@ -441,17 +455,17 @@ export default function ExamClient({ type, questions }) {
           </div>
 
           <button onClick={submitExam} className="p-2 bg-green-600 rounded">
-            הגש
+            {t('הגש')}
           </button>
         </div>
 
         <div className="mt-2 flex gap-4 text-sm font-bold">
           <span className="text-yellow-300">
-            טעויות רגילות מותרות: {config.allowedWrong}
+            {t('טעויות רגילות מותרות:')} {config.allowedWrong}
           </span>
           {(type === 'boat' || type === 'jetski') && (
             <span className="text-red-400">
-              טעויות בשאלות חובה: {config.mandatoryAllowedWrong}
+              {t('טעויות בשאלות חובה:')} {config.mandatoryAllowedWrong}
             </span>
           )}
         </div>
@@ -459,8 +473,10 @@ export default function ExamClient({ type, questions }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="bg-gray-200 dark:bg-gray-800 p-4 rounded-xl h-fit lg:sticky lg:top-6">
-          <h3 className="font-bold mb-4 text-center">מפת המבחן</h3>
-          <div className="space-y-2" data-no-translate>
+          <h3 className="font-bold mb-4 text-center">
+            {t('מפת המבחן')}
+          </h3>
+          <div className="space-y-2">
             {Array.from({ length: totalPages }).map((_, index) => {
               const from = index * PAGE_SIZE + 1;
               const to = Math.min(
@@ -507,7 +523,7 @@ export default function ExamClient({ type, questions }) {
               disabled={currentPage === 0}
               className="px-6 py-2 rounded bg-gray-300 dark:bg-gray-700 disabled:opacity-40"
             >
-              → אחורה
+              {t('→ אחורה')}
             </button>
 
             {currentPage === totalPages - 1 ? (
@@ -515,14 +531,14 @@ export default function ExamClient({ type, questions }) {
                 onClick={submitExam}
                 className="px-6 py-2 rounded bg-green-600 text-white"
               >
-                הגש
+                {t('הגש')}
               </button>
             ) : (
               <button
                 onClick={nextPage}
                 className="px-6 py-2 rounded bg-blue-600"
               >
-                הבא ←
+                {t('הבא ←')}
               </button>
             )}
           </div>

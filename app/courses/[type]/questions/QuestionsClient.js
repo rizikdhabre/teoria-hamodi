@@ -3,7 +3,15 @@
 import { useState, useMemo, useTransition, useEffect, useRef } from 'react';
 import { fetchQuestionsByRange } from '../actions';
 import { useLanguage } from '@/app/context/LanguageContext';
+import { useTranslationStrings } from '@/app/context/TranslationContext';
 import { useQuestionSpeech } from '@/lib/useQuestionSpeech';
+
+const QUESTION_SHELL_HEBREW_SOURCES = [
+  '☰ מפת שאלות',
+  'מפת שאלות',
+  '→ אחורה',
+  'הבא ←',
+];
 
 /* ---------------- Question Card ---------------- */
 
@@ -34,10 +42,7 @@ function QuestionCard({
   };
   const labels = RESULT_LABELS[lang] || RESULT_LABELS.HE;
   return (
-    <div
-      data-no-translate
-      className="bg-gray-200 dark:bg-gray-800 p-5 rounded-xl mb-3"
-    >
+    <div className="bg-gray-200 dark:bg-gray-800 p-5 rounded-xl mb-3">
       {question.hasImage && question.image && (
         <img
           src={`/question-images/${type}/${question.image}`}
@@ -165,6 +170,7 @@ export default function QuestionsClient({
   rangeSize = 10,
 }) {
   const { lang } = useLanguage();
+  const t = useTranslationStrings(QUESTION_SHELL_HEBREW_SOURCES);
   const { preload } = useQuestionSpeech(lang);
   const [mapOpen, setMapOpen] = useState(false);
   const [questions, setQuestions] = useState(initialQuestions);
@@ -305,7 +311,7 @@ export default function QuestionsClient({
               onClick={() => setMapOpen((v) => !v)}
               className="w-full bg-gray-200 dark:bg-gray-800 py-2 rounded-xl"
             >
-              ☰ מפת שאלות
+              {t('☰ מפת שאלות')}
             </button>
           </div>
 
@@ -314,9 +320,11 @@ export default function QuestionsClient({
               mapOpen ? 'block' : 'hidden'
             } lg:block lg:sticky lg:top-6`}
           >
-            <h3 className="font-bold mb-4 text-center">מפת שאלות</h3>
+            <h3 className="font-bold mb-4 text-center">
+              {t('מפת שאלות')}
+            </h3>
 
-            <div className="grid grid-cols-3 gap-2 text-sm" data-no-translate>
+            <div className="grid grid-cols-3 gap-2 text-sm">
               {ranges.map((r) => {
                 const active =
                   r.from === activeRange.from && r.to === activeRange.to;
@@ -364,7 +372,7 @@ export default function QuestionsClient({
               disabled={currentIndex === 0 || isLoadingRange}
               className="px-6 py-2 rounded bg-gray-300 dark:bg-gray-700 disabled:opacity-40"
             >
-              → אחורה
+              {t('→ אחורה')}
             </button>
 
             <button
@@ -372,7 +380,7 @@ export default function QuestionsClient({
               disabled={currentIndex === ranges.length - 1 || isLoadingRange}
               className="px-6 py-2 rounded bg-blue-600 disabled:opacity-40"
             >
-              הבא ←
+              {t('הבא ←')}
             </button>
           </div>
 
