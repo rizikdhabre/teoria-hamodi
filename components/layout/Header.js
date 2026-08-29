@@ -4,11 +4,22 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
 import { useTheme } from '@/app/context/ThemeContext';
+import { useTranslationStrings } from '@/app/context/TranslationContext';
+
+const HEADER_HEBREW_SOURCES = [
+  'ברוך הבא -חמודי תיאוריה',
+  'יציאה',
+  'אודות',
+  'בית',
+  'צור קשר',
+  'הרשמה/כניסה',
+];
 
 export default function Header() {
   const { theme, toggleTheme } = useTheme();
   const { data: session, status } = useSession();
   const { lang, changeLang } = useLanguage();
+  const t = useTranslationStrings(HEADER_HEBREW_SOURCES);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openLogo, setOpenLogo] = useState(false);
 
@@ -154,7 +165,7 @@ export default function Header() {
                   />
                 </button>
                 <span className="font-semibold text-gray-900 dark:text-white">
-                  ברוך הבא -חמודי תיאוריה
+                  {t('ברוך הבא -חמודי תיאוריה')}
                 </span>
               </div>
 
@@ -181,7 +192,7 @@ export default function Header() {
         transition
       "
                   >
-                    <span>יציאה</span>
+                    <span>{t('יציאה')}</span>
                   </button>
                 </div>
               )}
@@ -191,16 +202,16 @@ export default function Header() {
           {/* Navigation */}
           <nav className="hidden md:flex gap-8 font-medium text-gray-900 dark:text-white">
             <Link href="/about" className="hover:text-blue-400">
-              אודות
+              {t('אודות')}
             </Link>
             <Link href="/" className="hover:text-blue-400">
-              בית
+              {t('בית')}
             </Link>
-            <Link href="contactUs" className="hover:text-blue-400">
-              צור קשר
+            <Link href="/contactUs" className="hover:text-blue-400">
+              {t('צור קשר')}
             </Link>
             <Link href="/login" className="hover:text-blue-400">
-              הרשמה/כניסה
+              {t('הרשמה/כניסה')}
             </Link>
           </nav>
           <button
@@ -226,7 +237,7 @@ export default function Header() {
           </button>
 
           {/* Language Dropdown */}
-          <div className="relative" ref={menuRef} data-no-translate>
+          <div className="relative" ref={menuRef}>
             <button
               type="button"
               aria-haspopup="listbox"
@@ -242,7 +253,6 @@ export default function Header() {
 
             {open && (
               <ul
-                data-no-translate
                 role="listbox"
                 className="absolute right-0 sm:left-1/2 sm:-translate-x-1/2 mt-2
                            bg-white dark:bg-gray-800/90 backdrop-blur-md
@@ -275,16 +285,16 @@ export default function Header() {
         {mobileMenuOpen && (
           <nav className="md:hidden bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 flex flex-col items-center gap-4 py-3 font-medium ">
             <Link href="/about" onClick={() => setMobileMenuOpen(false)}>
-              אודות
+              {t('אודות')}
             </Link>
             <Link href="/" onClick={() => setMobileMenuOpen(false)}>
-              בית
+              {t('בית')}
             </Link>
-            <Link href="contactUs" onClick={() => setMobileMenuOpen(false)}>
-              צור קשר
+            <Link href="/contactUs" onClick={() => setMobileMenuOpen(false)}>
+              {t('צור קשר')}
             </Link>
             <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
-              הרשמה/כניסה
+              {t('הרשמה/כניסה')}
             </Link>
           </nav>
         )}

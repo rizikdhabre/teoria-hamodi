@@ -6,16 +6,55 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
+import { useLanguage } from '@/app/context/LanguageContext';
+import { useTranslationStrings } from '@/app/context/TranslationContext';
 
 const RESTRICTED_COURSES = ['jetski', 'boat'];
+const DASHBOARD_HEBREW_SOURCES = [
+  'יש להזין  PIN',
+  'שגיאת שרת, נסה שוב',
+  'שגיאה בשרת, נסה שוב מאוחר יותר',
+  '🚗 רכב ואופנוע',
+  ' אופנוע A',
+  'רכב פרטי B',
+  '🚚 משאית',
+  'משאית C1',
+  'משאית C',
+  '🚌 אוטובוס ו 🚜 טרקטור',
+  'אוטובוס D',
+  'טרקטור 1',
+  '🌊 רישיונות ים',
+  'אופנוע ים',
+  ' סירת מנוע ',
+  'שיעורים פשוטים וברורים',
+  'זמינות 24/7 בכל מכשיר',
+  'תרגולים עד שתעברו בהצלחה',
+  'מותאם אישית לכל סוג רישיון',
+  'למד תיאוריה בקלות, במהירות ובכיף 🚗',
+  'בחר את סוג הרישיון שלך ותתחיל להתקדם — צעד אחר צעד להצלחה!',
+  'למה ללמוד אצלנו?',
+  'בחר את הקורס שלך',
+  'התחל עכשיו',
+  'תיאוריה חמודי',
+  'הזן סיסמה לקורס',
+  'סיסמה',
+  'אישור',
+  'ביטול',
+  'שחזר',
+  'שחזור סיסמה (מנהל)',
+  'מאמת…',
+  'הסיסמה:',
+];
+
+const hasHebrew = (value) => /[\u0590-\u05FF]/.test(value);
 
 export default function HomePage() {
   const { status } = useSession();
+  const { dir } = useLanguage();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [current, setCurrent] = useState(0);
   const [prev, setPrev] = useState(null);
-  const [dir, setDir] = useState('ltr');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -25,6 +64,10 @@ export default function HomePage() {
   const [recoveryError, setRecoveryError] = useState('');
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [recoveredPassword, setRecoveredPassword] = useState('');
+  const t = useTranslationStrings([
+    ...DASHBOARD_HEBREW_SOURCES,
+    ...[error, recoveryError].filter(hasHebrew),
+  ]);
   const totalImages = 3;
   const fadeDuration = 1.2;
   const intervalMs = 7000;
@@ -105,7 +148,6 @@ export default function HomePage() {
       }
     } catch (err) {
       setError(err.response?.data?.message || 'שגיאה בשרת, נסה שוב מאוחר יותר');
-      console.log(err.response?.data?.message);
     }
   };
 
@@ -122,11 +164,6 @@ export default function HomePage() {
     openPasswordModal(`/courses/${requestedCourse}`);
     router.replace('/');
   }, [router, searchParams, status]);
-
-  useEffect(() => {
-    const dir = document.documentElement.dir || 'ltr';
-    setDir(dir);
-  }, []);
 
   // Auto-slide
   useEffect(() => {
@@ -299,7 +336,7 @@ export default function HomePage() {
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.8, ease: 'easeOut' }}
           >
-            למד תיאוריה בקלות, במהירות ובכיף 🚗
+            {t('למד תיאוריה בקלות, במהירות ובכיף 🚗')}
           </motion.h1>
 
           <motion.p
@@ -308,7 +345,7 @@ export default function HomePage() {
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.5, duration: 1 }}
           >
-            בחר את סוג הרישיון שלך ותתחיל להתקדם — צעד אחר צעד להצלחה!
+            {t('בחר את סוג הרישיון שלך ותתחיל להתקדם — צעד אחר צעד להצלחה!')}
           </motion.p>
 
           <motion.div
@@ -338,7 +375,7 @@ export default function HomePage() {
                   }}
                   className="px-6 py-3 bg-white text-blue-700 font-semibold rounded-md shadow hover:scale-105 transition-transform"
                 >
-                  {c.name}
+                  {t(c.name)}
                 </button>
               </motion.div>
             ))}
@@ -349,7 +386,7 @@ export default function HomePage() {
       {/* Advantages */}
       <section className="py-16 px-6 bg-gray-200 dark:bg-gray-800">
         <h2 className="text-3xl font-bold text-center mb-10">
-          למה ללמוד אצלנו?
+          {t('למה ללמוד אצלנו?')}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {advantages.map((adv) => (
@@ -358,7 +395,7 @@ export default function HomePage() {
               className="bg-gray-300 dark:bg-gray-700 p-6 rounded-lg shadow-md hover:shadow-xl transition"
             >
               <div className="text-4xl mb-3">{adv.icon}</div>
-              <p className="text-lg font-medium">{adv.text}</p>
+              <p className="text-lg font-medium">{t(adv.text)}</p>
             </div>
           ))}
         </div>
@@ -367,14 +404,14 @@ export default function HomePage() {
       {/* Courses */}
       <section className="py-16 px-6">
         <h2 className="text-3xl font-bold text-center mb-14">
-          בחר את הקורס שלך
+          {t('בחר את הקורס שלך')}
         </h2>
 
         {courseGroups.map((group) => (
           <div key={group.title} className="mb-10">
             {/* Group title */}
             <h3 className="text-2xl font-bold mb-8 border-b border-gray-300 dark:border-gray-600 pb-2">
-              {group.title}
+              {t(group.title)}
             </h3>
 
             {/* Courses grid */}
@@ -388,7 +425,7 @@ export default function HomePage() {
                   <div className="relative w-full h-80">
                     <Image
                       src={course.image}
-                      alt={course.name}
+                      alt={t(course.name)}
                       fill
                       className="object-cover"
                     />
@@ -396,14 +433,14 @@ export default function HomePage() {
 
                   <div className="p-6 text-center">
                     <h4 className="text-xl font-semibold mb-3">
-                      {course.name}
+                      {t(course.name)}
                     </h4>
 
                     <button
                       onClick={() => handleCourses(course)}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md"
                     >
-                      התחל עכשיו
+                      {t('התחל עכשיו')}
                     </button>
                   </div>
                 </div>
@@ -415,7 +452,7 @@ export default function HomePage() {
       <div className="flex justify-center">
         <Image
           src="/images/teoria-hamodi-logo.jpeg"
-          alt="תיאוריה חמודי"
+          alt={t('תיאוריה חמודי')}
           width={450}
           height={450}
           className="rounded-2xl shadow-2xl border dark:border-zinc-800"
@@ -426,7 +463,7 @@ export default function HomePage() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-80">
             <h3 className="text-xl font-bold text-center mb-4">
-              הזן סיסמה לקורס
+              {t('הזן סיסמה לקורס')}
             </h3>
 
             <form
@@ -439,13 +476,13 @@ export default function HomePage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="סיסמה"
+                placeholder={t('סיסמה')}
                 className="w-full px-3 py-2 border rounded mb-3 text-black"
                 autoFocus
               />
 
               {error && (
-                <p className="text-red-500 text-sm mb-3 text-center">{error}</p>
+                <p className="text-red-500 text-sm mb-3 text-center">{t(error)}</p>
               )}
 
               <div className="flex gap-3">
@@ -453,7 +490,7 @@ export default function HomePage() {
                   type="submit"
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded"
                 >
-                  אישור
+                  {t('אישור')}
                 </button>
 
                 <button
@@ -465,7 +502,7 @@ export default function HomePage() {
                   }}
                   className="flex-1 bg-red-400 py-2 rounded"
                 >
-                  ביטול
+                  {t('ביטול')}
                 </button>
 
                 <button
@@ -473,7 +510,7 @@ export default function HomePage() {
                   onClick={() => setShowRecoveryModal(true)}
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded"
                 >
-                  שחזר
+                  {t('שחזר')}
                 </button>
               </div>
             </form>
@@ -518,7 +555,7 @@ export default function HomePage() {
             </button>
 
             <h3 className="text-xl font-bold text-center mb-4 text-black dark:text-white">
-              שחזור סיסמה (מנהל)
+              {t('שחזור סיסמה (מנהל)')}
             </h3>
 
             <form
@@ -546,7 +583,7 @@ export default function HomePage() {
 
               {recoveryError && (
                 <p className="text-red-500 text-sm mb-3 text-center">
-                  {recoveryError}
+                  {t(recoveryError)}
                 </p>
               )}
 
@@ -561,7 +598,7 @@ export default function HomePage() {
               transition-colors
             "
                 >
-                  {recoveryLoading ? 'מאמת…' : 'אישור'}
+                  {recoveryLoading ? t('מאמת…') : t('אישור')}
                 </button>
 
                 <button
@@ -578,7 +615,7 @@ export default function HomePage() {
               transition-colors
             "
                 >
-                  ביטול
+                  {t('ביטול')}
                 </button>
               </div>
               {recoveredPassword && (
@@ -591,7 +628,7 @@ export default function HomePage() {
               text-center font-mono text-lg
             "
                 >
-                  הסיסמה: <span className="font-bold">{recoveredPassword}</span>
+                  {t('הסיסמה:')} <span className="font-bold">{recoveredPassword}</span>
                 </div>
               )}
             </form>

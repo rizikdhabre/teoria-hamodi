@@ -7,6 +7,23 @@ import HeartAnimation from '@/components/ui/HeartAnimation';
 import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import { Eye, EyeOff } from 'lucide-react';
+import { useTranslationStrings } from '@/app/context/TranslationContext';
+
+const LOGIN_HEBREW_SOURCES = [
+  'אנא מלא את כל השדות',
+  'דף כניסה',
+  'שם משתמש',
+  'סיסמה',
+  'כניסה',
+  'סיסמה חודשית',
+  'קוד PIN',
+  'קבלת סיסמה',
+  'הסיסמה החדשה שלך:',
+  'ברוך הבא',
+  'אנו שמחים לראות אותכם שוב',
+];
+const LOGIN_COLORS = ['pink', 'white'];
+const hasHebrew = (value) => /[\u0590-\u05FF]/.test(value);
 
 function Input({ label, type, name, rightIcon }) {
   return (
@@ -68,6 +85,10 @@ export default function LoginClient({ callbackUrl }) {
   const [loginError, setLoginError] = useState('');
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslationStrings([
+    ...LOGIN_HEBREW_SOURCES,
+    ...[fetchError, loginError].filter(hasHebrew),
+  ]);
 
   const handleFetchPassword = async (e) => {
     e.preventDefault();
@@ -118,17 +139,16 @@ export default function LoginClient({ callbackUrl }) {
   const mode = searchParams.get('mode');
   const isFetchPassword = mode === 'fetchPassword';
 
-  const colors = ['pink', 'white'];
   const [colorIndex, setColorIndex] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setColorIndex((prev) => (prev + 1) % colors.length);
+      setColorIndex((prev) => (prev + 1) % LOGIN_COLORS.length);
     }, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  const currentColor = colors[colorIndex];
+  const currentColor = LOGIN_COLORS[colorIndex];
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-[#25252b] text-gray-900 dark:text-white">
@@ -172,11 +192,11 @@ export default function LoginClient({ callbackUrl }) {
               transition={{ duration: 0.7 }}
               className="absolute top-0 left-0 w-1/2 h-full flex flex-col justify-center px-8"
             >
-              <h2 className="text-2xl font-bold text-center mb-3">דף כניסה</h2>
+              <h2 className="text-2xl font-bold text-center mb-3">{t('דף כניסה')}</h2>
               <form onSubmit={handleSignin} className="flex flex-col gap-4">
-                <Input label="שם משתמש" type="text" name="username" />
+                <Input label={t('שם משתמש')} type="text" name="username" />
                 <Input
-                  label="סיסמה"
+                  label={t('סיסמה')}
                   type={showPassword ? 'text' : 'password'}
                   name="password"
                   rightIcon={
@@ -197,16 +217,16 @@ export default function LoginClient({ callbackUrl }) {
                 />
                 {loginError && (
                   <p className="text-sm text-red-600 dark:text-red-500 text-center">
-                    {loginError}
+                    {t(loginError)}
                   </p>
                 )}
-                <Button text="כניסה" />
+                <Button text={t('כניסה')} />
                 <button
                   type="button"
                   onClick={() => router.push('/login?mode=fetchPassword')}
                   className="text-orange-600 font-semibold hover:underline"
                 >
-                  סיסמה חודשית
+                  {t('סיסמה חודשית')}
                 </button>
               </form>
             </motion.div>
@@ -225,30 +245,30 @@ export default function LoginClient({ callbackUrl }) {
               className="absolute top-0 right-0 w-1/2 h-full flex flex-col justify-center px-12"
             >
               <h2 className="text-3xl font-bold text-center mb-4">
-                סיסמה חודשית
+                {t('סיסמה חודשית')}
               </h2>
 
               <form
                 className="flex flex-col gap-6"
                 onSubmit={handleFetchPassword}
               >
-                <Input label="שם משתמש" type="text" name="username" />
+                <Input label={t('שם משתמש')} type="text" name="username" />
 
                 {/* PIN */}
-                <Input label="קוד PIN" type="password" name="pin" />
+                <Input label={t('קוד PIN')} type="password" name="pin" />
 
                 {fetchError && (
                   <p className="text-sm text-red-500 text-center">
-                    {fetchError}
+                    {t(fetchError)}
                   </p>
                 )}
-                <Button text="קבלת סיסמה" />
+                <Button text={t('קבלת סיסמה')} />
               </form>
 
               {fetchedPassword && (
                 <div className="mt-4 text-center bg-gray-200 dark:bg-black/30 p-3 rounded">
                   <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">
-                    הסיסמה החדשה שלך:
+                    {t('הסיסמה החדשה שלך:')}
                   </p>
                   <p className="text-lg font-mono text-[#e46033] select-all">
                     {fetchedPassword}
@@ -260,7 +280,7 @@ export default function LoginClient({ callbackUrl }) {
                 onClick={() => router.push('/login')}
                 className="text-[#e46033] font-semibold hover:underline p-5"
               >
-                כניסה
+                {t('כניסה')}
               </button>
             </motion.div>
           )}
@@ -278,8 +298,8 @@ export default function LoginClient({ callbackUrl }) {
               className="absolute top-0 right-0 w-1/2 h-full flex flex-col justify-center text-right px-10"
             >
               <HeartAnimation />
-              <h2 className="text-4xl font-bold mb-3 uppercase">ברוך הבא</h2>
-              <p>אנו שמחים לראות אותכם שוב</p>
+              <h2 className="text-4xl font-bold mb-3 uppercase">{t('ברוך הבא')}</h2>
+              <p>{t('אנו שמחים לראות אותכם שוב')}</p>
             </motion.div>
           ) : (
             <motion.div
@@ -291,8 +311,8 @@ export default function LoginClient({ callbackUrl }) {
               className="absolute top-0 left-0 w-1/2 h-full flex flex-col justify-center text-left px-10"
             >
               <HeartAnimation />
-              <h2 className="text-4xl font-bold mb-3 uppercase">ברוך הבא</h2>
-              <p>אנו שמחים לראות אותכם שוב</p>
+              <h2 className="text-4xl font-bold mb-3 uppercase">{t('ברוך הבא')}</h2>
+              <p>{t('אנו שמחים לראות אותכם שוב')}</p>
             </motion.div>
           )}
         </AnimatePresence>
