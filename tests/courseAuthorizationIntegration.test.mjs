@@ -295,38 +295,52 @@ test('authenticated invalid course types produce a not-found decision', async ()
   );
 });
 
-test('missing and invalid sea grants cannot share or swap destinations', async () => {
-  assert.deepEqual(
-    getCourseAccessRoutingDecision(
+test('missing and invalid grants stay distinct for each sea type', () => {
+  const cases = [
+    {
+      type: 'jetski',
+      requestedPath: '/courses/jetski',
+      missingDestination: '/?courseAccess=jetski',
+      invalidDestination: '/courses/access/clear?type=jetski',
+    },
+    {
+      type: 'boat',
+      requestedPath: '/courses/boat',
+      missingDestination: '/?courseAccess=boat',
+      invalidDestination: '/courses/access/clear?type=boat',
+    },
+  ];
+
+  for (const testCase of cases) {
+    const missing = getCourseAccessRoutingDecision(
       new SeaCourseGrantRequiredError('missing'),
-      'jetski',
-      '/courses/jetski'
-    ),
-    {
-      action: 'redirect',
-      destination: '/?courseAccess=jetski',
-    }
-  );
-  assert.deepEqual(
-    getCourseAccessRoutingDecision(
+      testCase.type,
+      testCase.requestedPath
+    );
+    const invalid = getCourseAccessRoutingDecision(
       new SeaCourseGrantRequiredError('invalid'),
-      'boat',
-      '/courses/boat'
-    ),
-    {
+      testCase.type,
+      testCase.requestedPath
+    );
+
+    assert.deepEqual(missing, {
       action: 'redirect',
-      destination: '/courses/access/clear?type=boat',
-    }
-  );
+      destination: testCase.missingDestination,
+    });
+    assert.deepEqual(invalid, {
+      action: 'redirect',
+      destination: testCase.invalidDestination,
+    });
+    assert.notEqual(missing.destination, invalid.destination);
+  }
 });
 
-test('unexpected course access failures produce a rethrow decision', async () => {
+test('unexpected course access failures preserve error identity', () => {
   const error = new Error('unexpected');
+  const decision = getCourseAccessRoutingDecision(error, 'car', '/courses/car');
 
-  assert.deepEqual(
-    getCourseAccessRoutingDecision(error, 'car', '/courses/car'),
-    { action: 'rethrow', error }
-  );
+  assert.equal(decision.action, 'rethrow');
+  assert.equal(decision.error, error);
 });
 
 test('server adapter consumes tested routing decisions without database access', async () => {
