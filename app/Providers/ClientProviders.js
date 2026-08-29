@@ -2,14 +2,13 @@
 
 import { SessionProvider } from 'next-auth/react';
 import { LanguageProvider } from '../context/LanguageContext';
-import TranslationManager from '@/components/TranslationManager';
+import { TranslationProvider } from '../context/TranslationContext';
 
 export default function ClientProviders({ children, lang }) {
   return (
     <SessionProvider>
       <LanguageProvider initialLang={lang}>
-        <TranslationManager />
-        {children}
+        <TranslationProvider>{children}</TranslationProvider>
       </LanguageProvider>
     </SessionProvider>
   );

@@ -1,30 +1,34 @@
 'use client';
 
-import { createContext, useContext, useState,useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { getLanguageMeta, normalizeLanguage } from '../../lib/language.mjs';
 
 const LanguageContext = createContext(null);
 
 export function LanguageProvider({ children, initialLang }) {
-  const router = useRouter();
-  const [lang, setLang] = useState(initialLang); // hydrated from server render
+  const [lang, setLang] = useState(() => normalizeLanguage(initialLang));
 
   useEffect(() => {
-    setLang(initialLang);
+    setLang(normalizeLanguage(initialLang));
   }, [initialLang]);
+
+  const dir = getLanguageMeta(lang).dir;
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const meta = getLanguageMeta(lang);
+    document.documentElement.lang = meta.htmlLang;
+    document.documentElement.dir = meta.dir;
+  }, [lang]);
+
   function changeLang(code) {
-    // 1️⃣ Set cookie FIRST (middleware reads this)
-    document.cookie = `lang=${code}; path=/; max-age=31536000; SameSite=Lax`;
-
-    // 2️⃣ Update client state (UI only)
-    setLang(code);
-
-    // 3️⃣ Force new request → middleware → server layout
-    router.refresh();
+    const normalized = normalizeLanguage(code);
+    document.cookie = `lang=${normalized}; path=/; max-age=31536000; SameSite=Lax`;
+    setLang(normalized);
   }
 
   return (
-    <LanguageContext.Provider value={{ lang, changeLang }}>
+    <LanguageContext.Provider value={{ lang, dir, changeLang }}>
       {children}
     </LanguageContext.Provider>
   );
