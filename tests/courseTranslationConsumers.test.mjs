@@ -7,7 +7,10 @@ import { createTranslationState } from '../lib/translationState.mjs';
 const { parse } = babelParser;
 
 const read = (file) =>
-  readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
+  readFileSync(new URL(`../${file}`, import.meta.url), 'utf8').replace(
+    /\r\n?/g,
+    '\n'
+  );
 
 function balancedContents(source, start, open, close) {
   let depth = 0;
