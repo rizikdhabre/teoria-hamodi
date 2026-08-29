@@ -79,3 +79,11 @@ scripts/
 
 # Local isolated implementation worktrees
 .worktrees/
+
+####################################
+# Local-only development material
+####################################
+/tests/
+/summary.md
+/.superpowers/
+/docs/superpowers/
