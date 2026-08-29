@@ -61,14 +61,13 @@ function Button({ text }) {
   );
 }
 
-export default function LoginClient() {
+export default function LoginClient({ callbackUrl }) {
   const [showPassword, setShowPassword] = useState(false);
   const [fetchError, setFetchError] = useState('');
   const [fetchedPassword, setFetchedPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/';
 
   const handleFetchPassword = async (e) => {
     e.preventDefault();
@@ -112,7 +111,7 @@ export default function LoginClient() {
       setLoginError(res.error);
       return;
     }
-    router.push(res.url || callbackUrl);
+    router.push(callbackUrl);
   };
 
   // 🔹 STATE DERIVED FROM URL

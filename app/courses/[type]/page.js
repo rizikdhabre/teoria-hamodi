@@ -1,28 +1,14 @@
 import Link from 'next/link';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
+import { isSeaCourse } from '@/lib/courseTypes.mjs';
+import { requireCourseAccess } from '@/lib/server/courseAccess';
 
 export default async function CoursePage({ params }) {
   const { type } = params;
-  const isSeaCourse = type === 'boat' || type === 'jetski';
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    const callbackUrl = isSeaCourse
-      ? `/?courseAccess=${type}`
-      : `/courses/${type}`;
-
-    redirect('/login?callbackUrl=' + encodeURIComponent(callbackUrl));
-  }
-
-  if (isSeaCourse) {
-    const cookieStore = cookies();
-    const hasAccess = cookieStore.get('sea_course_access');
-    if (!hasAccess) {
-      redirect('/?courseAccess=' + encodeURIComponent(type));
-    }
-  }
+  const { type: validatedType } = await requireCourseAccess(
+    type,
+    '/courses/' + type
+  );
+  const isSeaCourseType = isSeaCourse(validatedType);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
@@ -37,7 +23,7 @@ export default async function CoursePage({ params }) {
               </tr>
             </thead>
             <tbody className="bg-gray-200 dark:bg-gray-800">
-              {!isSeaCourse && (
+              {!isSeaCourseType && (
                 <tr className="border-t border-gray-300 dark:border-gray-700">
                   <td className="p-2">
                     <a
@@ -53,7 +39,7 @@ export default async function CoursePage({ params }) {
               )}
 
               {/* ONLY FOR BOAT / JETSKI */}
-              {isSeaCourse && (
+              {isSeaCourseType && (
                 <>
                   <tr className="border-t border-gray-300 dark:border-gray-700">
                     <td className="p-2">
@@ -92,7 +78,7 @@ export default async function CoursePage({ params }) {
 
         <div className="flex gap-4">
           <Link
-            href={`/courses/${type}/questions`}
+            href={`/courses/${validatedType}/questions`}
             className="flex-1 py-4 rounded-xl border border-gray-300 dark:border-gray-700
                        bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 font-medium
                        hover:border-blue-500 hover:bg-blue-500/10
@@ -102,7 +88,7 @@ export default async function CoursePage({ params }) {
           </Link>
 
           <Link
-            href={`/courses/${type}/exam`}
+            href={`/courses/${validatedType}/exam`}
             className="flex-1 py-4 rounded-xl border border-gray-300 dark:border-gray-700
                        bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-200 font-medium
                        hover:border-blue-500 hover:bg-blue-500/10

@@ -1,4 +1,6 @@
 import { getCollection } from '@/lib/db';
+import { getQuestionCollectionName } from '@/lib/courseTypes.mjs';
+import { requireCourseAccess } from '@/lib/server/courseAccess';
 import { getCurrentAudioMap } from '@/lib/ttsProfile';
 import ExamClient from './ExamClient';
 
@@ -26,17 +28,22 @@ async function getRandomQuestions(collection, count, source) {
 
 export default async function ExamPage({ params }) {
   const { type } = params;
+  const { type: validatedType } = await requireCourseAccess(
+    type,
+    '/courses/' + type + '/exam'
+  );
 
-  let totalSize = type === 'boat' ? 50 : 30;
+  const totalSize = validatedType === 'boat' ? 50 : 30;
 
-  const mainCollection = await getCollection(`${type}questions`);
+  const collectionName = getQuestionCollectionName(validatedType);
+  const mainCollection = await getCollection(collectionName);
 
   let questions = [];
 
   // SAME LOGIC AS BEFORE:
   // For all types except boat/jetski:
   // 25 car questions + remaining questions from selected type
-  if (type !== 'boat' && type !== 'jetski') {
+  if (validatedType !== 'boat' && validatedType !== 'jetski') {
     const carCollection = await getCollection('carquestions');
 
     const carQuestions = await getRandomQuestions(
@@ -48,7 +55,7 @@ export default async function ExamPage({ params }) {
     const mainQuestions = await getRandomQuestions(
       mainCollection,
       totalSize - 25, // same as before: 5
-      type
+      validatedType
     );
 
     questions = [...carQuestions, ...mainQuestions];
@@ -58,13 +65,13 @@ export default async function ExamPage({ params }) {
     questions = await getRandomQuestions(
       mainCollection,
       totalSize,
-      type
+      validatedType
     );
   }
 
   return (
     <div className="pt-10">
-      <ExamClient type={type} questions={questions} />
+      <ExamClient type={validatedType} questions={questions} />
     </div>
   );
 }

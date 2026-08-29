@@ -1,10 +1,17 @@
 "use server";
 
 import { getCollection } from "@/lib/db";
+import { getQuestionCollectionName } from "@/lib/courseTypes.mjs";
+import { requireCourseAccess } from "@/lib/server/courseAccess";
 import { getCurrentAudioMap } from "@/lib/ttsProfile";
 
 export async function fetchQuestionsByRange(type, from, to) {
-  const collection = await getCollection(`${type}questions`);
+  const { type: validatedType } = await requireCourseAccess(
+    type,
+    '/courses/' + type + '/questions'
+  );
+  const collectionName = getQuestionCollectionName(validatedType);
+  const collection = await getCollection(collectionName);
 
   const limit = to - from + 1;
   const skip = from - 1;
@@ -31,6 +38,11 @@ export async function fetchQuestionsByRange(type, from, to) {
 }
 
 export async function fetchQuestionsCount(type) {
-  const collection = await getCollection(`${type}questions`);
+  const { type: validatedType } = await requireCourseAccess(
+    type,
+    '/courses/' + type + '/questions'
+  );
+  const collectionName = getQuestionCollectionName(validatedType);
+  const collection = await getCollection(collectionName);
   return collection.countDocuments();
 }
