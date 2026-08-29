@@ -8,6 +8,17 @@ import {
   getSeaCourseCookieClearOptions,
   getSeaCourseCookieOptions,
 } from '../lib/server/seaCourseGrant.mjs';
+import {
+  AuthenticationRequiredError,
+  SeaCourseGrantRequiredError,
+} from '../lib/courseAccessPolicy.mjs';
+import { InvalidCourseTypeError } from '../lib/courseTypes.mjs';
+import { getCourseAccessRoutingDecision } from '../lib/courseAccessRouting.mjs';
+import {
+  CoursePasswordBadRequestError,
+  getCoursePasswordErrorResponse,
+  readCoursePassword,
+} from '../lib/coursePasswordRequest.mjs';
 
 const projectRoot = fileURLToPath(new URL('..', import.meta.url));
 
@@ -55,7 +66,10 @@ test('course password issuance authenticates before request and password access'
 
   assertAppearsInOrder(post, [
     ['authentication-only guard', /await\s+requireAuthenticatedUser\s*\(\s*\)/],
-    ['request JSON parsing', /await\s+request\.json\s*\(\s*\)/],
+    [
+      'tested password request reader',
+      /await\s+readCoursePassword\s*\(\s*request\s*\)/,
+    ],
     [
       'users collection access',
       /await\s+getCollection\s*\(\s*['"]users['"]\s*\)/,
@@ -64,11 +78,101 @@ test('course password issuance authenticates before request and password access'
     ['user-bound grant signing', /signSeaCourseGrant\s*\(\s*userId\s*,/],
   ]);
   assert.doesNotMatch(post, /\brequireCourseAccess\s*\(/);
-  assert.match(post, /error\s+instanceof\s+AuthenticationRequiredError/);
-  assert.match(post, /status:\s*401/);
+  assert.doesNotMatch(post, /request\.json\s*\(/);
+  assert.match(post, /getCoursePasswordErrorResponse\s*\(\s*error\s*\)/);
   assert.match(
     post,
     /response\.cookies\.set\s*\(\s*SEA_COURSE_COOKIE_NAME\s*,\s*grant\s*,\s*getSeaCourseCookieOptions\s*\(\s*process\.env\.NODE_ENV\s*\)/s
+  );
+});
+
+test('password reader rejects malformed JSON and invalid password shapes', async () => {
+  const invalidRequests = [
+    {
+      name: 'malformed JSON',
+      request: {
+        async json() {
+          throw new SyntaxError('malformed');
+        },
+      },
+    },
+    {
+      name: 'missing password',
+      request: {
+        async json() {
+          return {};
+        },
+      },
+    },
+    {
+      name: 'non-string password',
+      request: {
+        async json() {
+          return { password: 42 };
+        },
+      },
+    },
+    {
+      name: 'empty password',
+      request: {
+        async json() {
+          return { password: '' };
+        },
+      },
+    },
+    {
+      name: '257-character password',
+      request: {
+        async json() {
+          return { password: 'x'.repeat(257) };
+        },
+      },
+    },
+  ];
+
+  for (const { name, request } of invalidRequests) {
+    await assert.rejects(
+      () => readCoursePassword(request),
+      CoursePasswordBadRequestError,
+      name
+    );
+  }
+});
+
+test('password reader accepts the inclusive 1 through 256 character bounds', async () => {
+  assert.equal(
+    await readCoursePassword({
+      async json() {
+        return { password: 'x' };
+      },
+    }),
+    'x'
+  );
+  const maximum = 'x'.repeat(256);
+  assert.equal(
+    await readCoursePassword({
+      async json() {
+        return { password: maximum };
+      },
+    }),
+    maximum
+  );
+});
+
+test('password boundary maps typed and unexpected failures to safe descriptors', async () => {
+  assert.deepEqual(
+    getCoursePasswordErrorResponse(new AuthenticationRequiredError()),
+    { status: 401, body: { message: 'Authentication required' } }
+  );
+  assert.deepEqual(
+    getCoursePasswordErrorResponse(new CoursePasswordBadRequestError()),
+    { status: 400, body: { message: 'Invalid request' } }
+  );
+  assert.deepEqual(
+    getCoursePasswordErrorResponse(
+      new Error('NEXTAUTH_SECRET and signed-token-value')
+    ),
+    { status: 500, body: { message: 'Internal server error' } }
   );
 });
 
@@ -138,7 +242,94 @@ test('exam authorization precedes canonical collection construction and access',
   assert.doesNotMatch(page, /`\$\{type\}questions`/);
 });
 
-test('server adapter maps typed failures without database access or raw redirects', async () => {
+test('unauthenticated routing preserves only canonical non-sea requested paths', async () => {
+  const error = new AuthenticationRequiredError();
+
+  assert.deepEqual(
+    getCourseAccessRoutingDecision(error, 'car', '/courses/car/questions'),
+    {
+      action: 'redirect',
+      destination: '/login?callbackUrl=%2Fcourses%2Fcar%2Fquestions',
+    }
+  );
+  assert.deepEqual(
+    getCourseAccessRoutingDecision(error, 'car', 'https://evil.example'),
+    {
+      action: 'redirect',
+      destination: '/login?callbackUrl=%2Fcourses%2Fcar',
+    }
+  );
+});
+
+test('unauthenticated sea and unknown types receive distinct safe callbacks', async () => {
+  const error = new AuthenticationRequiredError();
+
+  assert.deepEqual(
+    getCourseAccessRoutingDecision(error, 'boat', '/courses/boat/exam'),
+    {
+      action: 'redirect',
+      destination: '/login?callbackUrl=%2F%3FcourseAccess%3Dboat',
+    }
+  );
+  assert.deepEqual(
+    getCourseAccessRoutingDecision(
+      error,
+      'unknown',
+      '/courses/unknown/questions'
+    ),
+    {
+      action: 'redirect',
+      destination: '/login?callbackUrl=%2F',
+    }
+  );
+});
+
+test('authenticated invalid course types produce a not-found decision', async () => {
+  assert.deepEqual(
+    getCourseAccessRoutingDecision(
+      new InvalidCourseTypeError(),
+      'unknown',
+      '/courses/unknown'
+    ),
+    { action: 'notFound' }
+  );
+});
+
+test('missing and invalid sea grants cannot share or swap destinations', async () => {
+  assert.deepEqual(
+    getCourseAccessRoutingDecision(
+      new SeaCourseGrantRequiredError('missing'),
+      'jetski',
+      '/courses/jetski'
+    ),
+    {
+      action: 'redirect',
+      destination: '/?courseAccess=jetski',
+    }
+  );
+  assert.deepEqual(
+    getCourseAccessRoutingDecision(
+      new SeaCourseGrantRequiredError('invalid'),
+      'boat',
+      '/courses/boat'
+    ),
+    {
+      action: 'redirect',
+      destination: '/courses/access/clear?type=boat',
+    }
+  );
+});
+
+test('unexpected course access failures produce a rethrow decision', async () => {
+  const error = new Error('unexpected');
+
+  assert.deepEqual(
+    getCourseAccessRoutingDecision(error, 'car', '/courses/car'),
+    { action: 'rethrow', error }
+  );
+});
+
+test('server adapter consumes tested routing decisions without database access', async () => {
   const source = await readSource('lib/server/courseAccess.js');
 
   assert.match(source, /createCourseAccessGuard\s*\(/);
@@ -148,11 +339,10 @@ test('server adapter maps typed failures without database access or raw redirect
     source,
     /verifySeaCourseGrant\s*\([^)]*process\.env\.NEXTAUTH_SECRET/s
   );
-  assert.match(source, /error\s+instanceof\s+AuthenticationRequiredError/);
-  assert.match(source, /error\s+instanceof\s+InvalidCourseTypeError/);
-  assert.match(source, /error\s+instanceof\s+SeaCourseGrantRequiredError/);
+  assert.match(source, /getCourseAccessRoutingDecision\s*\(/);
+  assert.match(source, /decision\.action\s*===\s*['"]redirect['"]/);
+  assert.match(source, /redirect\s*\(\s*decision\.destination\s*\)/);
   assert.match(source, /notFound\s*\(\s*\)/);
-  assert.match(source, /\/courses\/access\/clear\?type=/);
   assert.doesNotMatch(source, /\bgetCollection\b/);
 
   const access = exportedFunctionSource(source, 'requireCourseAccess');
@@ -161,7 +351,10 @@ test('server adapter maps typed failures without database access or raw redirect
       'policy access attempt',
       /await\s+courseAccessGuard\.requireCourseAccess\s*\(/,
     ],
-    ['post-failure canonical type check', /isCourseType\s*\(\s*type\s*\)/],
+    [
+      'pure routing decision',
+      /getCourseAccessRoutingDecision\s*\(\s*error\s*,\s*type\s*,\s*requestedPath\s*\)/,
+    ],
   ]);
 });
 
