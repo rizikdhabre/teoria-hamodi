@@ -103,13 +103,15 @@ function assertTranslationRegistrations(source, constant) {
 function liveTranslationCounts(source) {
   const counts = new Map();
   walkAst(parseSource(source), (node, ancestors) => {
+    const parent = ancestors.at(-1);
     if (
       node.type !== 'CallExpression' ||
       node.callee.type !== 'Identifier' ||
       node.callee.name !== 't' ||
       node.arguments.length !== 1 ||
       node.arguments[0].type !== 'StringLiteral' ||
-      !ancestors.some((ancestor) => ancestor.type === 'JSXExpressionContainer')
+      parent?.type !== 'JSXExpressionContainer' ||
+      parent.expression !== node
     ) {
       return;
     }
@@ -127,7 +129,7 @@ function assertDirectTRenders(source, sources, countOverrides = {}) {
     assert.equal(
       counts.get(text) ?? 0,
       expectedCount,
-      `expected ${expectedCount} live JSX translation expression for ${text}`
+      `expected ${expectedCount} direct JSX translation expression for ${text}`
     );
   }
   assert.deepEqual(
@@ -182,31 +184,85 @@ function assertServerDelegation(source) {
   const guardIndex = source.indexOf('await requireCourseAccess(');
   const clientIndex = source.indexOf('<CourseLandingClient');
   assert.ok(guardIndex !== -1 && guardIndex < clientIndex);
-  let hasValidatedGuardBinding = false;
-  walkAst(ast, (node) => {
+  const defaultExport = ast.program.body.find(
+    (node) =>
+      node.type === 'ExportDefaultDeclaration' &&
+      node.declaration.type === 'FunctionDeclaration' &&
+      node.declaration.id?.name === 'CoursePage' &&
+      node.declaration.async
+  );
+  assert.ok(defaultExport, 'CoursePage must remain the default async function');
+  const coursePage = defaultExport.declaration;
+  const returnStatement = coursePage.body.body.find(
+    (node) => node.type === 'ReturnStatement'
+  );
+  assert.ok(returnStatement, 'CoursePage must return its client presentation');
+
+  const renderedTypeIdentifiers = [];
+  walkAst(returnStatement.argument, (node) => {
     if (
-      node.type !== 'VariableDeclarator' ||
-      node.id.type !== 'ObjectPattern' ||
-      node.init?.type !== 'AwaitExpression' ||
-      node.init.argument?.type !== 'CallExpression' ||
-      node.init.argument.callee?.type !== 'Identifier' ||
-      node.init.argument.callee.name !== 'requireCourseAccess'
+      node.type !== 'JSXOpeningElement' ||
+      node.name.type !== 'JSXIdentifier' ||
+      node.name.name !== 'CourseLandingClient'
     ) {
       return;
     }
 
-    hasValidatedGuardBinding = node.id.properties.some(
-      (property) =>
-        property.type === 'ObjectProperty' &&
-        property.key.type === 'Identifier' &&
-        property.key.name === 'type' &&
-        property.value.type === 'Identifier' &&
-        property.value.name === 'validatedType'
+    const typeAttribute = node.attributes.find(
+      (attribute) =>
+        attribute.type === 'JSXAttribute' &&
+        attribute.name.name === 'type'
     );
+    if (
+      typeAttribute?.value?.type === 'JSXExpressionContainer' &&
+      typeAttribute.value.expression.type === 'Identifier'
+    ) {
+      renderedTypeIdentifiers.push(typeAttribute.value.expression.name);
+    }
   });
+  assert.deepEqual(
+    renderedTypeIdentifiers,
+    ['validatedType'],
+    'CourseLandingClient must render exactly one validated type identifier'
+  );
+
+  const renderedTypeBindings = [];
+  for (const statement of coursePage.body.body) {
+    if (statement.type !== 'VariableDeclaration') continue;
+    for (const declarator of statement.declarations) {
+      if (
+        declarator.id.type === 'Identifier' &&
+        declarator.id.name === renderedTypeIdentifiers[0]
+      ) {
+        renderedTypeBindings.push({ declarator, property: null });
+      }
+      if (declarator.id.type !== 'ObjectPattern') continue;
+      for (const property of declarator.id.properties) {
+        if (
+          property.type === 'ObjectProperty' &&
+          property.value.type === 'Identifier' &&
+          property.value.name === renderedTypeIdentifiers[0]
+        ) {
+          renderedTypeBindings.push({ declarator, property });
+        }
+      }
+    }
+  }
+
+  const [{ declarator, property } = {}] = renderedTypeBindings;
+  const guardCall = declarator?.init?.type === 'AwaitExpression'
+    ? declarator.init.argument
+    : null;
   assert.ok(
-    hasValidatedGuardBinding,
-    'validatedType must come from the awaited requireCourseAccess result'
+    renderedTypeBindings.length === 1 &&
+      property?.key?.type === 'Identifier' &&
+      property.key.name === 'type' &&
+      guardCall?.type === 'CallExpression' &&
+      guardCall.callee.type === 'Identifier' &&
+      guardCall.callee.name === 'requireCourseAccess' &&
+      guardCall.arguments[0]?.type === 'Identifier' &&
+      guardCall.arguments[0].name === 'type',
+    'rendered type binding must be the top-level guard-result property'
   );
   assert.match(
     source,
@@ -438,10 +494,26 @@ test('contract checks reject realistic validated-type, rendering, and audio muta
     'const { type: validatedType } = await requireCourseAccess(',
     'const validatedType = type;\n  await requireCourseAccess('
   );
+  const nestedDecoyMutation = page.replace(
+    `const { type: validatedType } = await requireCourseAccess(
+    type,
+    '/courses/' + type
+  );`,
+    `const validatedType = type;
+  await requireCourseAccess(type, '/courses/' + type);
+  async function unusedGuardDecoy() {
+    const { type: validatedType } = await requireCourseAccess(type);
+    return validatedType;
+  }`
+  );
   const deadRenderMutation = `${questions.replace(
     "{t('מפת שאלות')}",
     "{'מפת שאלות'}"
   )}\n// t('מפת שאלות')`;
+  const falseLogicalMutation = questions.replace(
+    "{t('מפת שאלות')}",
+    "{'מפת שאלות'}{false && t('מפת שאלות')}"
+  );
 
   assert.throws(
     () =>
@@ -456,11 +528,19 @@ test('contract checks reject realistic validated-type, rendering, and audio muta
   );
   assert.throws(
     () => assertServerDelegation(provenanceMutation),
-    /validatedType must come from the awaited requireCourseAccess result/
+    /rendered type binding must be the top-level guard-result property/
+  );
+  assert.throws(
+    () => assertServerDelegation(nestedDecoyMutation),
+    /rendered type binding must be the top-level guard-result property/
   );
   assert.throws(
     () => assertDirectTRenders(deadRenderMutation, QUESTION_SOURCES),
-    /live JSX translation expression for מפת שאלות/
+    /direct JSX translation expression for מפת שאלות/
+  );
+  assert.throws(
+    () => assertDirectTRenders(falseLogicalMutation, QUESTION_SOURCES),
+    /direct JSX translation expression for מפת שאלות/
   );
 
   assert.throws(
