@@ -1,9 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getCollection, toObjectId } from "@/lib/db";
-import { generateTTS } from "@/lib/elevenlabs";
-import { uploadToR2 } from "@/lib/r2";
 import { getAudioProfileVersion, getCurrentAudioEntry } from "@/lib/ttsProfile";
+import { isRealTtsEnabled } from "@/lib/ttsEnvironment.mjs";
 
 const pendingTtsBundleJobs = new Map();
 const LOCK_TTL_MS = 30 * 1000;
@@ -295,6 +294,10 @@ async function withMongoLockHeartbeat({
 }
 
 async function generateAndUploadAudio({ docId, lang, text, type, optionKey }) {
+  const [{ generateTTS }, { uploadToR2 }] = await Promise.all([
+    import("@/lib/elevenlabs"),
+    import("@/lib/r2"),
+  ]);
   const buffer = await generateTTS(text, lang);
   const fileName = `${docId}_${lang}_${type}_${optionKey || "q"}.mp3`;
 
@@ -303,6 +306,16 @@ async function generateAndUploadAudio({ docId, lang, text, type, optionKey }) {
 
 export async function POST(req) {
   try {
+    if (!isRealTtsEnabled(process.env.NODE_ENV)) {
+      return NextResponse.json(
+        {
+          error: "TTS is disabled in development.",
+          code: "tts_disabled_in_development",
+        },
+        { status: 503 }
+      );
+    }
+
     const body = await req.json();
 
     const {
