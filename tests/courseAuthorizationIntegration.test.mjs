@@ -82,8 +82,9 @@ test('course password issuance authenticates before request and password access'
   assert.match(post, /getCoursePasswordErrorResponse\s*\(\s*error\s*\)/);
   assert.match(
     post,
-    /response\.cookies\.set\s*\(\s*SEA_COURSE_COOKIE_NAME\s*,\s*grant\s*,\s*getSeaCourseCookieOptions\s*\(\s*process\.env\.NODE_ENV\s*\)/s
+    /setSeaCourseGrantCookies\s*\(\s*response\s*,\s*grant\s*,\s*process\.env\.NODE_ENV\s*\)/s
   );
+  assert.doesNotMatch(post, /response\.cookies\.set\s*\(/);
 });
 
 test('password reader rejects malformed JSON and invalid password shapes', async () => {
@@ -394,8 +395,9 @@ test('sea cookie issuance and clearing share the exact scoped contract', async (
   assert.match(route, /Location:\s*['"]\/\?courseAccess=['"]\s*\+\s*type/);
   assert.match(
     route,
-    /cookies\.set\s*\(\s*SEA_COURSE_COOKIE_NAME\s*,\s*['"]['"]\s*,\s*getSeaCourseCookieClearOptions/s
+    /clearSeaCourseGrantCookies\s*\(\s*response\s*,\s*process\.env\.NODE_ENV\s*\)/s
   );
+  assert.doesNotMatch(route, /response\.cookies\.set\s*\(/);
 });
 
 test('login server sanitizes the sole callback prop and client uses only that prop', async () => {

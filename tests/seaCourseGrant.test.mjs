@@ -2,14 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import jwt from 'jsonwebtoken';
-import {
+import { NextResponse } from 'next/server.js';
+import * as seaCourseGrantModule from '../lib/server/seaCourseGrant.mjs';
+
+const {
   SEA_COURSE_COOKIE_NAME,
   SeaCourseGrantConfigurationError,
   getSeaCourseCookieClearOptions,
   getSeaCourseCookieOptions,
   signSeaCourseGrant,
   verifySeaCourseGrant,
-} from '../lib/server/seaCourseGrant.mjs';
+} = seaCourseGrantModule;
 
 const TEST_SECRET = 'test-only-nextauth-secret-not-from-environment';
 const USER_ID = 'user-123';
@@ -169,4 +172,68 @@ test('uses the exact sea-course cookie name and scoped issuance and clearing opt
     maxAge: 0,
     expires: new Date(0),
   });
+});
+
+test('grant issuance keeps the signed course cookie while expiring the legacy root cookie', () => {
+  assert.equal(
+    typeof seaCourseGrantModule.setSeaCourseGrantCookies,
+    'function'
+  );
+
+  const response = NextResponse.json({ success: true });
+  seaCourseGrantModule.setSeaCourseGrantCookies(
+    response,
+    'signed-grant',
+    'production'
+  );
+
+  const setCookieHeaders = response.headers.getSetCookie();
+  assert.equal(setCookieHeaders.length, 2);
+  assert.match(
+    setCookieHeaders[0],
+    /^sea_course_access=signed-grant; Path=\/courses; .*Max-Age=900; Secure; HttpOnly; SameSite=lax$/
+  );
+  assert.equal(
+    setCookieHeaders[1],
+    'sea_course_access=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; Secure; HttpOnly; SameSite=lax'
+  );
+});
+
+test('grant clearing expires both the current course cookie and the legacy root cookie', () => {
+  assert.equal(
+    typeof seaCourseGrantModule.clearSeaCourseGrantCookies,
+    'function'
+  );
+
+  const response = new NextResponse(null, { status: 303 });
+  seaCourseGrantModule.clearSeaCourseGrantCookies(response, 'production');
+
+  assert.deepEqual(response.headers.getSetCookie(), [
+    'sea_course_access=; Path=/courses; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; Secure; HttpOnly; SameSite=lax',
+    'sea_course_access=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; Secure; HttpOnly; SameSite=lax',
+  ]);
+});
+
+test('development migration headers remain usable over local HTTP', () => {
+  const issuanceResponse = NextResponse.json({ success: true });
+  seaCourseGrantModule.setSeaCourseGrantCookies(
+    issuanceResponse,
+    'signed-grant',
+    'development'
+  );
+
+  const clearingResponse = new NextResponse(null, { status: 303 });
+  seaCourseGrantModule.clearSeaCourseGrantCookies(
+    clearingResponse,
+    'development'
+  );
+
+  for (const response of [issuanceResponse, clearingResponse]) {
+    const setCookieHeaders = response.headers.getSetCookie();
+    assert.equal(setCookieHeaders.length, 2);
+    assert.match(setCookieHeaders[0], /Path=\/courses/);
+    assert.match(setCookieHeaders[1], /Path=\//);
+    assert.doesNotMatch(setCookieHeaders[0], /; Secure/);
+    assert.doesNotMatch(setCookieHeaders[1], /; Secure/);
+  }
 });

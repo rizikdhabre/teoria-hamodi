@@ -7,8 +7,7 @@ import {
   readCoursePassword,
 } from '@/lib/coursePasswordRequest.mjs';
 import {
-  SEA_COURSE_COOKIE_NAME,
-  getSeaCourseCookieOptions,
+  setSeaCourseGrantCookies,
   signSeaCourseGrant,
 } from '@/lib/server/seaCourseGrant.mjs';
 
@@ -47,11 +46,7 @@ export async function POST(request) {
     const grant = signSeaCourseGrant(userId, process.env.NEXTAUTH_SECRET);
     const response = NextResponse.json({ success: true }, { status: 200 });
 
-    response.cookies.set(
-      SEA_COURSE_COOKIE_NAME,
-      grant,
-      getSeaCourseCookieOptions(process.env.NODE_ENV)
-    );
+    setSeaCourseGrantCookies(response, grant, process.env.NODE_ENV);
 
     return response;
   } catch (error) {
