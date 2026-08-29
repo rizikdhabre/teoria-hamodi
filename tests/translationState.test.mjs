@@ -58,6 +58,18 @@ test('Hebrew skips requests and pending or failed translations fall back to Hebr
   assert.equal(state.translate('בית', '/', 'EN'), 'בית');
 });
 
+test('a failed source stays failed when its registration updates and only a new source is requested', () => {
+  const state = createTranslationState();
+  state.setScope('/', 'EN');
+  state.register('page', ['א']);
+  state.markFailed(state.createRequest());
+
+  state.unregister('page');
+  state.register('page', ['ב', 'א']);
+
+  assert.deepEqual(state.createRequest().sources, ['ב']);
+});
+
 test('language metadata is RTL for HE/AR and LTR for EN', () => {
   assert.deepEqual(getLanguageMeta('HE'), { code: 'HE', htmlLang: 'he', dir: 'rtl', targetLang: 'Hebrew' });
   assert.equal(getLanguageMeta('AR').dir, 'rtl');

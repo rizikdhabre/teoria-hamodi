@@ -37,15 +37,16 @@ export function TranslationProvider({ children }) {
 
   const register = useCallback((id, sources) => {
     const state = stateRef.current;
-    if (!state.register(id, sources)) return () => {};
+    if (!state.register(id, sources)) return;
     state.invalidate();
     publish();
-    return () => {
-      if (state.unregister(id)) {
-        state.invalidate();
-        publish();
-      }
-    };
+  }, [publish]);
+
+  const unregister = useCallback((id) => {
+    const state = stateRef.current;
+    if (!state.unregister(id)) return;
+    state.invalidate();
+    publish();
   }, [publish]);
 
   useEffect(() => {
@@ -91,7 +92,7 @@ export function TranslationProvider({ children }) {
     [lang, pathname, version],
   );
 
-  const value = useMemo(() => ({ register, translate }), [register, translate]);
+  const value = useMemo(() => ({ register, unregister, translate }), [register, translate, unregister]);
   return <TranslationContext.Provider value={value}>{children}</TranslationContext.Provider>;
 }
 
@@ -101,10 +102,17 @@ export function useTranslationStrings(hebrewSources) {
   const registrationId = useId();
   const signature = JSON.stringify(dedupeExactSources(hebrewSources));
 
-  useEffect(() => context.register(registrationId, JSON.parse(signature)), [
+  useEffect(() => {
+    context.register(registrationId, JSON.parse(signature));
+  }, [
     context.register,
     registrationId,
     signature,
+  ]);
+
+  useEffect(() => () => context.unregister(registrationId), [
+    context.unregister,
+    registrationId,
   ]);
 
   return context.translate;
